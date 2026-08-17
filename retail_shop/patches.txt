@@ -1,0 +1,4 @@
+[pre_model_sync]
+
+[post_model_sync]
+retail_shop.patches.v0_0_1.setup_retail_shop

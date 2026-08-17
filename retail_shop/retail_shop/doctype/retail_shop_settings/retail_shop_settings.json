@@ -1,0 +1,78 @@
+{
+ "actions": [],
+ "creation": "2026-08-08 00:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "default_company",
+  "default_warehouse",
+  "default_item_group",
+  "default_walk_in_customer",
+  "default_currency",
+  "require_electrician"
+ ],
+ "fields": [
+  {
+   "fieldname": "default_company",
+   "fieldtype": "Link",
+   "label": "Default Company",
+   "options": "Company"
+  },
+  {
+   "fieldname": "default_warehouse",
+   "fieldtype": "Link",
+   "label": "Default Warehouse",
+   "options": "Warehouse"
+  },
+  {
+   "description": "Used when a Purchase Entry's Product Code doesn't match an existing product and a new one is created automatically.",
+   "fieldname": "default_item_group",
+   "fieldtype": "Link",
+   "label": "Default Item Group for New Products",
+   "options": "Item Group"
+  },
+  {
+   "fieldname": "default_walk_in_customer",
+   "fieldtype": "Link",
+   "label": "Default Walk-in Customer",
+   "options": "Customer"
+  },
+  {
+   "fieldname": "default_currency",
+   "fieldtype": "Link",
+   "label": "Default Currency",
+   "options": "Currency",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "require_electrician",
+   "fieldtype": "Check",
+   "label": "Require Electrician"
+  }
+ ],
+ "issingle": 1,
+ "links": [],
+ "module": "Retail Shop",
+ "name": "Retail Shop Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Retail Administrator",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}
+

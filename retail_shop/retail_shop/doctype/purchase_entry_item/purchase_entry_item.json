@@ -1,0 +1,93 @@
+{
+ "actions": [],
+ "creation": "2026-08-08 00:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "item_code",
+  "item_name",
+  "unit_purchase_price",
+  "qty",
+  "selling_unit_price",
+  "uom",
+  "conversion_factor",
+  "amount",
+  "remarks"
+ ],
+ "fields": [
+  {
+   "description": "If this code doesn't match an existing product, a new one is created automatically. If it does, the existing product is restocked instead — see Purchase Entry's duplicate-handling logic.",
+   "fieldname": "item_code",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Product Code",
+   "reqd": 1
+  },
+  {
+   "description": "Only used when creating a new product. For an existing Product Code, the product's current description is kept as-is.",
+   "fieldname": "item_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Product Description"
+  },
+  {
+   "fieldname": "unit_purchase_price",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Purchase Unit Price",
+   "reqd": 1
+  },
+  {
+   "fieldname": "qty",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Quantity Purchased",
+   "reqd": 1
+  },
+  {
+   "description": "Sets the product's Standard Selling Rate to this value.",
+   "fieldname": "selling_unit_price",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Selling Unit Price",
+   "reqd": 1
+  },
+  {
+   "fieldname": "uom",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Purchase UOM",
+   "options": "UOM"
+  },
+  {
+   "default": "1",
+   "fieldname": "conversion_factor",
+   "fieldtype": "Float",
+   "label": "Conversion Factor",
+   "read_only": 1
+  },
+  {
+   "fieldname": "amount",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Amount",
+   "read_only": 1
+  },
+  {
+   "fieldname": "remarks",
+   "fieldtype": "Small Text",
+   "label": "Remarks"
+  }
+ ],
+ "istable": 1,
+ "links": [],
+ "module": "Retail Shop",
+ "name": "Purchase Entry Item",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
+

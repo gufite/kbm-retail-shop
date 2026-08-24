@@ -24,7 +24,19 @@ start() {
 }
 
 start gunicorn /usr/local/bin/start.sh
-start socketio node /home/frappe/frappe-bench/apps/frappe/socketio.js
+
+# socketio (realtime) is supervised in its own restart-with-backoff loop
+# rather than treated as fatal: the rest of the app (login, desk, background
+# jobs) works fine without realtime, so a socketio crash/misconfiguration
+# should degrade gracefully instead of taking the whole container down.
+supervise_socketio() {
+	while true; do
+		node /home/frappe/frappe-bench/apps/frappe/socketio.js
+		echo "socketio exited (code $?); restarting in 5s..."
+		sleep 5
+	done
+}
+start socketio supervise_socketio
 
 # Plain `bench worker`, not `bench worker-pool`: worker-pool's FrappeWorker
 # auto-starts its own scheduler thread per worker (an experimental feature),

@@ -57,7 +57,7 @@ For each service below, deploy **the same repository** and set the **Root Direct
 deployment/railway
 ```
 
-Attach the same shared volume to every Frappe service at:
+Using each service's **Volumes** tab (not a Dockerfile `VOLUME` — Railway's Dockerfile builder rejects that instruction), attach the same shared volume to every Frappe service at:
 
 ```text
 /home/frappe/frappe-bench/sites

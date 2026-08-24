@@ -35,10 +35,9 @@ WORKDIR /home/frappe/frappe-bench
 RUN cp -r /home/frappe/frappe-bench/sites/assets /home/frappe/frappe-bench/assets && \
 	rm -rf /home/frappe/frappe-bench/sites/assets
 
-VOLUME [ \
-	"/home/frappe/frappe-bench/sites", \
-	"/home/frappe/frappe-bench/logs" \
-]
+# No VOLUME instruction: Railway's Dockerfile builder rejects it outright.
+# Persistence is provided by attaching a Railway Volume to
+# /home/frappe/frappe-bench/sites on each Frappe service instead.
 
 USER root
 

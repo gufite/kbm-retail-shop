@@ -48,14 +48,6 @@ bench set-config -g default_site "${SITE_NAME}"
 
 printf '%s\n' "${SITE_NAME}" > "${SITES_DIR}/currentsite.txt"
 
-echo "=== ${SITES_DIR}/common_site_config.json ==="
-cat "${SITES_DIR}/common_site_config.json"
-echo ""
-echo "=== ${SITES_DIR}/${SITE_NAME}/site_config.json ==="
-cat "${SITES_DIR}/${SITE_NAME}/site_config.json" 2>/dev/null || echo "(not created yet)"
-echo ""
-echo "======================================="
-
 wait-for-it "${DB_HOST}:${DB_PORT}" -t 120
 wait-for-it "${REDIS_CACHE_HOST}:${REDIS_CACHE_PORT}" -t 120
 
@@ -69,5 +61,26 @@ if [ "${REDIS_SOCKETIO_HOST}:${REDIS_SOCKETIO_PORT}" != "${REDIS_QUEUE_HOST}:${R
 fi
 
 /usr/local/bin/railway-bootstrap.sh
+
+# Existing Railway volumes can carry forward a stale per-site site_config.json
+# with localhost Redis URLs. Frappe merges common_site_config first, then lets
+# site_config override it, so rewrite the site-level keys on every boot.
+if [ -f "${SITES_DIR}/${SITE_NAME}/site_config.json" ]; then
+	bench --site "${SITE_NAME}" set-config db_host "${DB_HOST}"
+	bench --site "${SITE_NAME}" set-config db_port "${DB_PORT}"
+	bench --site "${SITE_NAME}" set-config db_type "${DB_TYPE}"
+	bench --site "${SITE_NAME}" set-config redis_cache "${REDIS_CACHE_URL}"
+	bench --site "${SITE_NAME}" set-config redis_queue "${REDIS_QUEUE_URL}"
+	bench --site "${SITE_NAME}" set-config redis_socketio "${REDIS_SOCKETIO_URL}"
+	bench --site "${SITE_NAME}" set-config socketio_port "${SOCKETIO_PORT}"
+fi
+
+echo "=== ${SITES_DIR}/common_site_config.json ==="
+cat "${SITES_DIR}/common_site_config.json"
+echo ""
+echo "=== ${SITES_DIR}/${SITE_NAME}/site_config.json ==="
+cat "${SITES_DIR}/${SITE_NAME}/site_config.json" 2>/dev/null || echo "(not created yet)"
+echo ""
+echo "======================================="
 
 exec "$@"

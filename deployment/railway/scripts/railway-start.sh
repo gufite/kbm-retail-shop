@@ -25,7 +25,16 @@ start() {
 
 start gunicorn /usr/local/bin/start.sh
 start socketio node /home/frappe/frappe-bench/apps/frappe/socketio.js
-start worker-pool bench worker-pool --queue short,default,long --num-workers "${BACKGROUND_WORKERS}"
+
+# Plain `bench worker`, not `bench worker-pool`: worker-pool's FrappeWorker
+# auto-starts its own scheduler thread per worker (an experimental feature),
+# which races the dedicated `bench schedule` process below for the same
+# lock file and makes it exit immediately, believing another instance is
+# already running.
+for i in $(seq 1 "${BACKGROUND_WORKERS}"); do
+	start "worker-${i}" bench worker --queue short,default,long
+done
+
 start schedule bench schedule
 start nginx /usr/local/bin/nginx-entrypoint.sh
 

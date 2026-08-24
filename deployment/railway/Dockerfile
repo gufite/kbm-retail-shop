@@ -44,8 +44,9 @@ USER root
 
 COPY scripts/entrypoint.sh /usr/local/bin/entrypoint.sh
 COPY scripts/bootstrap.sh /usr/local/bin/railway-bootstrap.sh
+COPY scripts/start.sh /usr/local/bin/start.sh
 
-RUN chmod 755 /usr/local/bin/entrypoint.sh /usr/local/bin/railway-bootstrap.sh
+RUN chmod 755 /usr/local/bin/entrypoint.sh /usr/local/bin/railway-bootstrap.sh /usr/local/bin/start.sh
 
 USER frappe
 

@@ -79,6 +79,7 @@ def _sync_workspace(name, icon, sequence_id, content, shortcuts, links, roles):
 	workspace = _get_workspace_doc(name)
 	workspace.update(
 		{
+			"label": name,
 			"title": name,
 			"module": WORKSPACE_MODULE,
 			"public": 1,

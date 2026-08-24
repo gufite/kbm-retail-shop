@@ -87,7 +87,7 @@ create_site_if_missing() {
 		)
 
 		if [ "${DB_TYPE}" = "mariadb" ]; then
-			create_args+=("--no-mariadb-socket")
+			create_args+=("--mariadb-user-host-login-scope=%")
 		fi
 
 		create_args+=("${install_args[@]}")

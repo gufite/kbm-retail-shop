@@ -88,7 +88,10 @@ Frontend-specific environment variables:
 ```text
 BACKEND=backend:8000
 SOCKETIO=websocket:9000
+FRAPPE_SITE_NAME_HEADER=<your-site-name>
 ```
+
+Set `FRAPPE_SITE_NAME_HEADER` to the same value as `SITE_NAME`. Without it, nginx falls back to the incoming `Host` header to pick the site, which only works once your public domain matches `SITE_NAME` exactly — leaving it unset means the default Railway `*.up.railway.app` domain will not resolve to your site until a matching custom domain is attached.
 
 ## Shared Environment Variables For All Frappe Services
 
@@ -138,6 +141,52 @@ AUTO_MIGRATE=1
 6. Create `scheduler`
 7. Create `frontend`
 8. Generate the public domain only on `frontend`
+
+## Local Smoke Test
+
+You can test the same container layout locally with plain Docker.
+
+From the app repository root:
+
+```bash
+chmod +x deployment/railway/scripts/local-smoke-test.sh
+chmod +x deployment/railway/scripts/local-smoke-test-down.sh
+./deployment/railway/scripts/local-smoke-test.sh
+```
+
+What it does:
+
+- builds the Railway image locally
+- starts MariaDB and Redis
+- starts `backend`, `websocket`, `worker`, `scheduler`, and `frontend`
+- creates the site automatically
+- exposes the frontend on `http://127.0.0.1:8080`
+
+What should pass:
+
+- `http://127.0.0.1:8080/api/method/ping` returns `{"message":"pong"}`
+- the login page loads in the browser
+
+Useful log commands:
+
+```bash
+docker logs -f retail-railway-local-backend
+docker logs -f retail-railway-local-frontend
+docker logs -f retail-railway-local-worker
+```
+
+To stop the local stack:
+
+```bash
+./deployment/railway/scripts/local-smoke-test-down.sh
+```
+
+To wipe the persisted test data too:
+
+```bash
+docker volume rm retail-railway-local-db retail-railway-local-redis retail-railway-local-sites
+docker network rm retail-railway-local-net
+```
 
 ## Restoring Your Existing Retail Data
 

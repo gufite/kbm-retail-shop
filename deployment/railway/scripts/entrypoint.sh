@@ -48,6 +48,14 @@ bench set-config -g default_site "${SITE_NAME}"
 
 printf '%s\n' "${SITE_NAME}" > "${SITES_DIR}/currentsite.txt"
 
+echo "=== ${SITES_DIR}/common_site_config.json ==="
+cat "${SITES_DIR}/common_site_config.json"
+echo ""
+echo "=== ${SITES_DIR}/${SITE_NAME}/site_config.json ==="
+cat "${SITES_DIR}/${SITE_NAME}/site_config.json" 2>/dev/null || echo "(not created yet)"
+echo ""
+echo "======================================="
+
 wait-for-it "${DB_HOST}:${DB_PORT}" -t 120
 wait-for-it "${REDIS_CACHE_HOST}:${REDIS_CACHE_PORT}" -t 120
 

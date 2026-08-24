@@ -6,6 +6,14 @@ SITES_DIR=${SITES_DIR:-"${BENCH_PATH}/sites"}
 ASSETS_PATH="${SITES_DIR}/assets"
 BAKED_ASSETS_PATH="${BENCH_PATH}/assets"
 
+# Railway creates a newly attached volume as root. Initialize its ownership
+# once, then run the full Frappe stack as the unprivileged image user.
+if [ "$(id -u)" -eq 0 ]; then
+	mkdir -p "${SITES_DIR}" "${BENCH_PATH}/logs"
+	chown -R frappe:frappe "${SITES_DIR}" "${BENCH_PATH}/logs"
+	exec runuser --preserve-environment -u frappe -- "$0" "$@"
+fi
+
 SITE_NAME=${SITE_NAME:?SITE_NAME is required}
 DB_HOST=${DB_HOST:?DB_HOST is required}
 DB_PORT=${DB_PORT:-3306}

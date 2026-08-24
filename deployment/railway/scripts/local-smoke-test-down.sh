@@ -4,11 +4,7 @@ set -euo pipefail
 PROJECT_PREFIX="${PROJECT_PREFIX:-retail-railway-local}"
 
 containers=(
-	"${PROJECT_PREFIX}-frontend"
-	"${PROJECT_PREFIX}-scheduler"
-	"${PROJECT_PREFIX}-worker"
-	"${PROJECT_PREFIX}-websocket"
-	"${PROJECT_PREFIX}-backend"
+	"${PROJECT_PREFIX}-app"
 	"${PROJECT_PREFIX}-redis"
 	"${PROJECT_PREFIX}-mariadb"
 )

@@ -44,10 +44,11 @@ USER root
 COPY scripts/entrypoint.sh /usr/local/bin/entrypoint.sh
 COPY scripts/bootstrap.sh /usr/local/bin/railway-bootstrap.sh
 COPY scripts/start.sh /usr/local/bin/start.sh
+COPY scripts/railway-start.sh /usr/local/bin/railway-start.sh
 
-RUN chmod 755 /usr/local/bin/entrypoint.sh /usr/local/bin/railway-bootstrap.sh /usr/local/bin/start.sh
+RUN chmod 755 /usr/local/bin/entrypoint.sh /usr/local/bin/railway-bootstrap.sh /usr/local/bin/start.sh /usr/local/bin/railway-start.sh
 
 USER frappe
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
-CMD ["start.sh"]
+CMD ["railway-start.sh"]

@@ -79,6 +79,13 @@ def ensure_module_visibility():
 def _ensure_module_profile(profile_name, blocked_modules):
 	if frappe.db.exists("Module Profile", profile_name):
 		profile = frappe.get_doc("Module Profile", profile_name)
+		# Module Profile's own on_update hook queues a background job
+		# (queue_action) outside of app installation, which locks the
+		# document until a worker processes it. Skip the save entirely
+		# when nothing actually changed so a routine migrate never
+		# re-triggers that lock/enqueue cycle.
+		if {row.module for row in profile.block_modules} == set(blocked_modules):
+			return profile
 	else:
 		profile = frappe.get_doc({"doctype": "Module Profile", "module_profile_name": profile_name})
 

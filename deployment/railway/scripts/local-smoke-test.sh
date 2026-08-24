@@ -16,18 +16,10 @@ SITES_VOLUME="${PROJECT_PREFIX}-sites"
 
 DB_CONTAINER="${PROJECT_PREFIX}-mariadb"
 REDIS_CONTAINER="${PROJECT_PREFIX}-redis"
-BACKEND_CONTAINER="${PROJECT_PREFIX}-backend"
-WEBSOCKET_CONTAINER="${PROJECT_PREFIX}-websocket"
-WORKER_CONTAINER="${PROJECT_PREFIX}-worker"
-SCHEDULER_CONTAINER="${PROJECT_PREFIX}-scheduler"
-FRONTEND_CONTAINER="${PROJECT_PREFIX}-frontend"
+APP_CONTAINER="${PROJECT_PREFIX}-app"
 
 containers=(
-	"${FRONTEND_CONTAINER}"
-	"${SCHEDULER_CONTAINER}"
-	"${WORKER_CONTAINER}"
-	"${WEBSOCKET_CONTAINER}"
-	"${BACKEND_CONTAINER}"
+	"${APP_CONTAINER}"
 	"${REDIS_CONTAINER}"
 	"${DB_CONTAINER}"
 )
@@ -80,27 +72,6 @@ wait_for_http() {
 	done
 }
 
-common_frappe_env=(
-	-e "SITE_NAME=${SITE_NAME}"
-	-e "DB_TYPE=mariadb"
-	-e "DB_HOST=${DB_CONTAINER}"
-	-e "DB_PORT=3306"
-	-e "DB_ROOT_USER=root"
-	-e "DB_ROOT_PASSWORD=${DB_ROOT_PASSWORD}"
-	-e "REDIS_CACHE_HOST=${REDIS_CONTAINER}"
-	-e "REDIS_CACHE_PORT=6379"
-	-e "REDIS_QUEUE_HOST=${REDIS_CONTAINER}"
-	-e "REDIS_QUEUE_PORT=6379"
-	-e "REDIS_SOCKETIO_HOST=${REDIS_CONTAINER}"
-	-e "REDIS_SOCKETIO_PORT=6379"
-	-e "INSTALL_APPS=erpnext,retail_shop"
-	-e "AUTO_SETUP_SITE=1"
-	-e "AUTO_MIGRATE=0"
-	-e "ADMIN_PASSWORD=${ADMIN_PASSWORD}"
-	-e "SOCKETIO_PORT=9000"
-	-e "BACKGROUND_WORKERS=1"
-)
-
 echo "Building ${IMAGE_TAG} from ${ROOT_DIR} ..."
 docker build -t "${IMAGE_TAG}" "${ROOT_DIR}"
 
@@ -132,54 +103,35 @@ docker run -d \
 wait_for_container_state "${DB_CONTAINER}" running 180
 wait_for_container_state "${REDIS_CONTAINER}" running 60
 
-echo "Starting Frappe services ..."
+echo "Starting the consolidated Frappe app (web + realtime + worker + scheduler + nginx) ..."
 docker run -d \
-	--name "${BACKEND_CONTAINER}" \
-	--network "${NETWORK_NAME}" \
-	-v "${SITES_VOLUME}:/home/frappe/frappe-bench/sites" \
-	"${common_frappe_env[@]}" \
-	-e "AUTO_MIGRATE=1" \
-	"${IMAGE_TAG}" \
-	start.sh >/dev/null
-
-docker run -d \
-	--name "${WEBSOCKET_CONTAINER}" \
-	--network "${NETWORK_NAME}" \
-	-v "${SITES_VOLUME}:/home/frappe/frappe-bench/sites" \
-	"${common_frappe_env[@]}" \
-	"${IMAGE_TAG}" \
-	node /home/frappe/frappe-bench/apps/frappe/socketio.js >/dev/null
-
-docker run -d \
-	--name "${WORKER_CONTAINER}" \
-	--network "${NETWORK_NAME}" \
-	-v "${SITES_VOLUME}:/home/frappe/frappe-bench/sites" \
-	"${common_frappe_env[@]}" \
-	"${IMAGE_TAG}" \
-	bench worker --queue short,default,long >/dev/null
-
-docker run -d \
-	--name "${SCHEDULER_CONTAINER}" \
-	--network "${NETWORK_NAME}" \
-	-v "${SITES_VOLUME}:/home/frappe/frappe-bench/sites" \
-	"${common_frappe_env[@]}" \
-	"${IMAGE_TAG}" \
-	bench schedule >/dev/null
-
-docker run -d \
-	--name "${FRONTEND_CONTAINER}" \
+	--name "${APP_CONTAINER}" \
 	--network "${NETWORK_NAME}" \
 	-p "${FRONTEND_PORT}:8080" \
 	-v "${SITES_VOLUME}:/home/frappe/frappe-bench/sites" \
-	"${common_frappe_env[@]}" \
-	-e "BACKEND=${BACKEND_CONTAINER}:8000" \
-	-e "SOCKETIO=${WEBSOCKET_CONTAINER}:9000" \
+	-e "SITE_NAME=${SITE_NAME}" \
+	-e "DB_TYPE=mariadb" \
+	-e "DB_HOST=${DB_CONTAINER}" \
+	-e "DB_PORT=3306" \
+	-e "DB_ROOT_USER=root" \
+	-e "DB_ROOT_PASSWORD=${DB_ROOT_PASSWORD}" \
+	-e "REDIS_CACHE_HOST=${REDIS_CONTAINER}" \
+	-e "REDIS_CACHE_PORT=6379" \
+	-e "REDIS_QUEUE_HOST=${REDIS_CONTAINER}" \
+	-e "REDIS_QUEUE_PORT=6379" \
+	-e "REDIS_SOCKETIO_HOST=${REDIS_CONTAINER}" \
+	-e "REDIS_SOCKETIO_PORT=6379" \
+	-e "INSTALL_APPS=erpnext,retail_shop" \
+	-e "AUTO_SETUP_SITE=1" \
+	-e "AUTO_MIGRATE=1" \
+	-e "ADMIN_PASSWORD=${ADMIN_PASSWORD}" \
+	-e "SOCKETIO_PORT=9000" \
+	-e "BACKGROUND_WORKERS=1" \
 	-e "FRAPPE_SITE_NAME_HEADER=${SITE_NAME}" \
-	"${IMAGE_TAG}" \
-	nginx-entrypoint.sh >/dev/null
+	"${IMAGE_TAG}" >/dev/null
 
-echo "Waiting for frontend at http://127.0.0.1:${FRONTEND_PORT}/api/method/ping ..."
-wait_for_http "http://127.0.0.1:${FRONTEND_PORT}/api/method/ping" 420
+echo "Waiting for the app at http://127.0.0.1:${FRONTEND_PORT}/api/method/ping ..."
+wait_for_http "http://127.0.0.1:${FRONTEND_PORT}/api/method/ping" 600
 
 cat <<EOF
 
@@ -192,8 +144,7 @@ Expected checks:
   - Open the URL and confirm the login page loads.
   - Visit http://127.0.0.1:${FRONTEND_PORT}/api/method/ping and expect {"message":"pong"}.
   - Inspect logs with:
-      docker logs -f ${BACKEND_CONTAINER}
-      docker logs -f ${FRONTEND_CONTAINER}
+      docker logs -f ${APP_CONTAINER}
 
 Cleanup:
   ./deployment/railway/scripts/local-smoke-test-down.sh

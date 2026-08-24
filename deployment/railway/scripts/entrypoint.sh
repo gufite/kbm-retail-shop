@@ -36,6 +36,12 @@ REDIS_SOCKETIO_URL=${REDIS_SOCKETIO_URL:-redis://${REDIS_SOCKETIO_HOST}:${REDIS_
 
 mkdir -p "${SITES_DIR}" "${BENCH_PATH}/logs"
 
+# A newly mounted Railway volume hides the image's default configuration file.
+# Bench set-config requires the file to exist before it can update it.
+if [ ! -f "${SITES_DIR}/common_site_config.json" ]; then
+	printf '{}\n' > "${SITES_DIR}/common_site_config.json"
+fi
+
 rm -rf "${ASSETS_PATH}"
 ln -s "${BAKED_ASSETS_PATH}" "${ASSETS_PATH}"
 

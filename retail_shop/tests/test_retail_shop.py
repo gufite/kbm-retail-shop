@@ -61,6 +61,71 @@ class TestRetailShop(FrappeTestCase):
 		user = self._make_user("salesperson-users@test.local", ["Salesperson"])
 		self.assertFalse(frappe.has_permission("User", "create", user=user.name))
 
+	def test_technical_admin_sidebar_is_filtered(self):
+		from retail_shop.api.workspace import get_workspace_sidebar_items
+		from retail_shop.setup.workspace import (
+			SETTINGS_WORKSPACE_NAME,
+			STAFF_WORKSPACE_NAME,
+			WORKSPACE_NAME,
+		)
+
+		names = {page.get("name") for page in get_workspace_sidebar_items().get("pages", [])}
+		self.assertEqual(names, {WORKSPACE_NAME, STAFF_WORKSPACE_NAME, SETTINGS_WORKSPACE_NAME})
+
+	def test_shop_users_page_is_on_staff_workspace(self):
+		from retail_shop.setup.workspace import STAFF_WORKSPACE_NAME
+
+		workspace = frappe.get_doc("Workspace", STAFF_WORKSPACE_NAME)
+		labels = {row.label for row in workspace.links}
+		self.assertIn("Users", labels)
+		self.assertNotIn("User", labels)
+		self.assertTrue(
+			any(row.link_to == "shop-users" for row in workspace.links if row.type == "Link")
+		)
+
+	def test_create_shop_user_with_username_and_role(self):
+		from retail_shop.api.shop_users import create_shop_user, list_shop_users
+		from retail_shop.setup.defaults import SALESPERSON_ROLE, SHOP_ADMIN_ROLE, TECHNICAL_ADMIN_ROLE
+
+		username = f"cashier{uuid4().hex[:8]}"
+		result = create_shop_user(username, "secret12", SALESPERSON_ROLE)
+		self.assertEqual(result["username"], username)
+
+		user = frappe.get_doc("User", result["name"])
+		self.assertEqual(user.username, username)
+		self.assertTrue(user.email.endswith("@kbmlight.local"))
+		self.assertIn(SALESPERSON_ROLE, [row.role for row in user.roles])
+		self.assertEqual(user.send_welcome_email, 0)
+
+		data = list_shop_users()
+		self.assertEqual(data["roles"], [TECHNICAL_ADMIN_ROLE, SHOP_ADMIN_ROLE, SALESPERSON_ROLE])
+		self.assertTrue(any(row["username"] == username for row in data["users"]))
+
+	def test_shop_admin_can_only_create_salesperson(self):
+		from retail_shop.api.shop_users import create_shop_user
+		from retail_shop.setup.defaults import SALESPERSON_ROLE, SHOP_ADMIN_ROLE, TECHNICAL_ADMIN_ROLE
+
+		admin = self._make_user("shop-admin-create@test.local", [SHOP_ADMIN_ROLE])
+		frappe.set_user(admin.name)
+		try:
+			with self.assertRaises(frappe.PermissionError):
+				create_shop_user(f"ta{uuid4().hex[:6]}", "secret12", TECHNICAL_ADMIN_ROLE)
+			result = create_shop_user(f"sp{uuid4().hex[:6]}", "secret12", SALESPERSON_ROLE)
+			self.assertEqual(result["role"], SALESPERSON_ROLE)
+		finally:
+			frappe.set_user("Administrator")
+
+	def test_salesperson_cannot_manage_shop_users(self):
+		from retail_shop.api.shop_users import list_shop_users
+
+		user = self._make_user("salesperson-manage@test.local", ["Salesperson"])
+		frappe.set_user(user.name)
+		try:
+			with self.assertRaises(frappe.PermissionError):
+				list_shop_users()
+		finally:
+			frappe.set_user("Administrator")
+
 	def test_purchase_entry_increases_stock(self):
 		item_code = self._make_item()
 		supplier = self._make_supplier()

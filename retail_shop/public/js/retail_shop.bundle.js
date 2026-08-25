@@ -71,8 +71,7 @@ retail_shop.link_meta = {
 	"Electrician": "Maintain electrician records and rates.",
 	"Customer": "Create and update customer profiles.",
 	"Supplier": "Maintain supplier information.",
-	"User": "Manage staff accounts and login access.",
-	"Sales Staff": "Onboard, enable, disable, or reset passwords for salesperson accounts.",
+	"Users": "Add store logins with a username, role, and password.",
 	"Retail Shop Settings": "Configure default store behavior.",
 	"Retail Commission Settings": "Set commission rates and rules.",
 	"Mode of Payment": "Manage accepted payment methods.",
@@ -345,7 +344,13 @@ retail_shop.hide_help_dropdown_for_non_technical_users = function () {
 };
 
 retail_shop.should_filter_home_workspace = function () {
-	return retail_shop.has_any_role(["Shop Admin", "Salesperson"]);
+	return retail_shop.has_any_role([
+		"Shop Admin",
+		"Salesperson",
+		"Technical Admin",
+		"System Manager",
+		"Administrator",
+	]);
 };
 
 retail_shop.is_retail_admin = function () {
@@ -354,9 +359,15 @@ retail_shop.is_retail_admin = function () {
 
 retail_shop.get_visible_workspaces = function () {
 	const visible = [...retail_shop.visible_workspaces];
-	if (retail_shop.is_retail_admin()) {
-		// Staff (User management) stays out of this list even for Shop Admin:
-		// it's technical-admin-only.
+	if (
+		retail_shop.has_any_role([
+			"Shop Admin",
+			"Technical Admin",
+			"System Manager",
+			"Administrator",
+		])
+	) {
+		visible.push("Staff");
 		visible.push("Store Settings");
 	}
 	return visible;

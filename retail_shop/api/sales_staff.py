@@ -1,12 +1,13 @@
 import frappe
 from frappe import _
 
-from retail_shop.setup.defaults import SHOP_ADMIN_ROLE, SALESPERSON_ROLE, TECHNICAL_ADMIN_ROLE
-
-# Never manageable through this Shop Admin tool, even if they also hold
-# Salesperson. Keeps Shop Admin from touching Technical Admin or other
-# Shop Admin accounts through the back door of this API.
-_PROTECTED_ROLES = {TECHNICAL_ADMIN_ROLE, "System Manager", SHOP_ADMIN_ROLE}
+from retail_shop.api.shop_users import (
+	create_shop_user,
+	list_shop_users,
+	set_shop_user_enabled,
+	set_shop_user_password,
+)
+from retail_shop.setup.defaults import SALESPERSON_ROLE, SHOP_ADMIN_ROLE
 
 
 def _ensure_caller_is_shop_admin():
@@ -14,78 +15,25 @@ def _ensure_caller_is_shop_admin():
 		frappe.throw(_("Not permitted"), frappe.PermissionError)
 
 
-def _is_managed_salesperson(user: str) -> bool:
-	if user in ("Administrator", "Guest"):
-		return False
-
-	roles = set(frappe.get_roles(user))
-	if SALESPERSON_ROLE not in roles:
-		return False
-
-	return not roles.intersection(_PROTECTED_ROLES)
-
-
 @frappe.whitelist()
 def list_sales_staff():
-	"""Every Salesperson-only account a Shop Admin is allowed to manage."""
 	_ensure_caller_is_shop_admin()
-
-	users = frappe.get_all(
-		"User",
-		filters={"name": ["not in", ["Administrator", "Guest"]]},
-		fields=["name", "full_name", "enabled", "last_login"],
-		order_by="full_name asc",
-	)
-	return [user for user in users if _is_managed_salesperson(user.name)]
+	return list_shop_users()
 
 
 @frappe.whitelist()
-def create_sales_staff(full_name: str, email: str):
+def create_sales_staff(username: str, password: str, full_name: str | None = None):
 	_ensure_caller_is_shop_admin()
-
-	full_name = (full_name or "").strip()
-	email = (email or "").strip().lower()
-	if not full_name or not email:
-		frappe.throw(_("Full Name and Email are required."))
-
-	if frappe.db.exists("User", email):
-		frappe.throw(_("A user with this email already exists."))
-
-	first_name, _sep, last_name = full_name.partition(" ")
-
-	doc = frappe.get_doc(
-		{
-			"doctype": "User",
-			"email": email,
-			"first_name": first_name,
-			"last_name": last_name or None,
-			"full_name": full_name,
-			"user_type": "System User",
-			"send_welcome_email": 1,
-			"roles": [{"role": SALESPERSON_ROLE}],
-		}
-	)
-	doc.insert(ignore_permissions=True)
-	return doc.name
+	return create_shop_user(username, password, SALESPERSON_ROLE, full_name)
 
 
 @frappe.whitelist()
 def set_sales_staff_enabled(user: str, enabled):
 	_ensure_caller_is_shop_admin()
-
-	if not _is_managed_salesperson(user):
-		frappe.throw(_("You can only manage Salesperson accounts."), frappe.PermissionError)
-
-	frappe.db.set_value("User", user, "enabled", frappe.utils.cint(enabled))
+	return set_shop_user_enabled(user, enabled)
 
 
 @frappe.whitelist()
-def reset_sales_staff_password(user: str):
+def reset_sales_staff_password(user: str, password: str):
 	_ensure_caller_is_shop_admin()
-
-	if not _is_managed_salesperson(user):
-		frappe.throw(_("You can only manage Salesperson accounts."), frappe.PermissionError)
-
-	from frappe.core.doctype.user.user import reset_password
-
-	reset_password(user)
+	return set_shop_user_password(user, password)

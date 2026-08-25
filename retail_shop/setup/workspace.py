@@ -57,9 +57,9 @@ def ensure_workspace():
 		content=_get_staff_workspace_content(),
 		shortcuts=[],
 		links=_get_staff_cards(),
-		# Raw User accounts (including Shop Admin and Technical Admin) are
-		# technical-admin-only. Shop Admin manages salespeople through Sales Staff.
-		roles=("System Manager", TECHNICAL_ADMIN_ROLE),
+		# Simple Users page (username + role + password). Technical Admin can
+		# assign all three shop roles; Shop Admin is limited to Salesperson.
+		roles=("System Manager", TECHNICAL_ADMIN_ROLE, SHOP_ADMIN_ROLE),
 	)
 	_sync_workspace(
 		name=SETTINGS_WORKSPACE_NAME,
@@ -255,7 +255,7 @@ def _get_staff_cards():
 		{
 			"label": "Staff Management",
 			"links": [
-				{"label": "User", "link_type": "DocType", "link_to": "User"},
+				{"label": "Users", "link_type": "Page", "link_to": "shop-users"},
 			],
 		},
 	]
@@ -266,12 +266,7 @@ def _get_settings_workspace_content():
 		{
 			"id": "store-settings-card-configuration",
 			"type": "card",
-			"data": {"card_name": "Store Configuration", "col": 6},
-		},
-		{
-			"id": "store-settings-card-staff-management",
-			"type": "card",
-			"data": {"card_name": "Staff Management", "col": 6},
+			"data": {"card_name": "Store Configuration", "col": 12},
 		},
 	]
 
@@ -288,16 +283,6 @@ def _get_settings_cards():
 					"link_to": "Retail Commission Settings",
 				},
 				{"label": "Mode of Payment", "link_type": "DocType", "link_to": "Mode of Payment"},
-			],
-		},
-		{
-			"label": "Staff Management",
-			"links": [
-				# Deliberately not the raw User doctype: this narrow Shop Admin
-				# page can only create/enable/disable/reset-password Salesperson
-				# accounts — it can't touch Technical Admin or other Shop Admin
-				# accounts, or assign roles at all. See api/sales_staff.py.
-				{"label": "Sales Staff", "link_type": "Page", "link_to": "sales-staff"},
 			],
 		},
 	]

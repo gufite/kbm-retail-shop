@@ -1,7 +1,7 @@
 import frappe
 from frappe.permissions import add_permission, update_permission_property
 
-from retail_shop.setup.defaults import SHOP_ADMIN_ROLE, SALESPERSON_ROLE, TECHNICAL_ADMIN_ROLE, TECHNICAL_ADMIN_ROLE
+from retail_shop.setup.defaults import SHOP_ADMIN_ROLE, SALESPERSON_ROLE, TECHNICAL_ADMIN_ROLE
 
 
 PERM_TYPES = (
@@ -32,11 +32,13 @@ def ensure_permissions():
 # doctype permissions don't matter if the Point of Sale *page* itself
 # rejects the role first. Add our roles wherever the SRS needs that page.
 PAGE_ACCESS = {
-	"point-of-sale": (SHOP_ADMIN_ROLE, SALESPERSON_ROLE),
-	"stock-balance": (SHOP_ADMIN_ROLE, SALESPERSON_ROLE),
-	# Narrow salesperson-account management tool (retail_shop.api.sales_staff)
-	# — deliberately admin-only, unlike the two rows above.
-	"sales-staff": (SHOP_ADMIN_ROLE,),
+	"point-of-sale": (TECHNICAL_ADMIN_ROLE, SHOP_ADMIN_ROLE, SALESPERSON_ROLE),
+	"stock-balance": (TECHNICAL_ADMIN_ROLE, SHOP_ADMIN_ROLE, SALESPERSON_ROLE),
+	# Shop user management (username + role + password). Technical Admin
+	# can assign all three shop roles; Shop Admin is limited to Salesperson
+	# in the API even though they can open the same page.
+	"shop-users": (TECHNICAL_ADMIN_ROLE, SHOP_ADMIN_ROLE),
+	"sales-staff": (TECHNICAL_ADMIN_ROLE, SHOP_ADMIN_ROLE),
 }
 
 
@@ -190,6 +192,8 @@ def _permission_map():
 			# Point of Sale shortcut) is silently dropped from the
 			# permission-filtered shortcut list even though the page
 			# itself is directly reachable by URL.
+			"System Manager": {"read": 1},
+			TECHNICAL_ADMIN_ROLE: {"read": 1},
 			SHOP_ADMIN_ROLE: {"read": 1},
 			SALESPERSON_ROLE: {"read": 1},
 		},

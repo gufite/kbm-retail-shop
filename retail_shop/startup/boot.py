@@ -1,7 +1,7 @@
 import frappe
 
 from retail_shop.setup.defaults import SHOP_ADMIN_ROLE, SALESPERSON_ROLE, is_technical_admin
-from retail_shop.setup.workspace import SETTINGS_WORKSPACE_NAME, WORKSPACE_NAME
+from retail_shop.setup.workspace import SETTINGS_WORKSPACE_NAME, STAFF_WORKSPACE_NAME, WORKSPACE_NAME
 
 
 def boot_session(bootinfo):
@@ -9,9 +9,9 @@ def boot_session(bootinfo):
 		return
 
 	roles = set(frappe.get_roles())
-	if is_technical_admin(roles):
-		return
-	if not roles.intersection({SHOP_ADMIN_ROLE, SALESPERSON_ROLE}):
+	if not (
+		is_technical_admin(roles) or roles.intersection({SHOP_ADMIN_ROLE, SALESPERSON_ROLE})
+	):
 		return
 
 	allowed_workspaces = list(bootinfo.get("allowed_workspaces") or [])
@@ -26,7 +26,10 @@ def boot_session(bootinfo):
 	home_alias["label"] = WORKSPACE_NAME
 
 	visible_workspaces = [home_alias, retail_workspace]
-	if SHOP_ADMIN_ROLE in roles:
+	if is_technical_admin(roles) or SHOP_ADMIN_ROLE in roles:
+		staff_workspace = workspace_by_name.get(STAFF_WORKSPACE_NAME)
+		if staff_workspace:
+			visible_workspaces.append(staff_workspace)
 		settings_workspace = workspace_by_name.get(SETTINGS_WORKSPACE_NAME)
 		if settings_workspace:
 			visible_workspaces.append(settings_workspace)

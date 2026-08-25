@@ -199,9 +199,9 @@ def _get_workspace_cards():
 		{
 			"label": "Sales Counter",
 			"links": [
-				{"label": "Point of Sale", "link_type": "Page", "link_to": "point-of-sale"},
-				{"label": "Counter Sales", "link_type": "DocType", "link_to": "POS Invoice"},
-				{"label": "Sales Invoice", "link_type": "DocType", "link_to": "Sales Invoice"},
+				{"label": "New Sale", "link_type": "Page", "link_to": "point-of-sale"},
+				{"label": "Sales History", "link_type": "DocType", "link_to": "POS Invoice"},
+				{"label": "Credit Sales", "link_type": "DocType", "link_to": "Sales Invoice"},
 				{"label": "Stock Balance", "link_type": "Page", "link_to": "stock-balance"},
 			],
 		},

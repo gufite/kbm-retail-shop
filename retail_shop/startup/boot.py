@@ -17,15 +17,13 @@ def boot_session(bootinfo):
 	allowed_workspaces = list(bootinfo.get("allowed_workspaces") or [])
 	workspace_by_name = {page.get("name"): page for page in allowed_workspaces}
 	retail_workspace = workspace_by_name.get(WORKSPACE_NAME)
+	visible_workspaces = []
 
-	if not retail_workspace:
-		return
-
-	home_alias = dict(retail_workspace)
-	home_alias["name"] = "Home"
-	home_alias["label"] = WORKSPACE_NAME
-
-	visible_workspaces = [home_alias, retail_workspace]
+	if retail_workspace:
+		home_alias = dict(retail_workspace)
+		home_alias["name"] = "Home"
+		home_alias["label"] = WORKSPACE_NAME
+		visible_workspaces.extend([home_alias, retail_workspace])
 	if is_technical_admin(roles) or SHOP_ADMIN_ROLE in roles:
 		staff_workspace = workspace_by_name.get(STAFF_WORKSPACE_NAME)
 		if staff_workspace:
@@ -36,7 +34,7 @@ def boot_session(bootinfo):
 
 	bootinfo.allowed_workspaces = visible_workspaces
 
-	if bootinfo.user:
+	if bootinfo.user and retail_workspace:
 		bootinfo.user.default_workspace = {
 			"name": WORKSPACE_NAME,
 			"title": WORKSPACE_NAME,

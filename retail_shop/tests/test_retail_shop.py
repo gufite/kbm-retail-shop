@@ -114,6 +114,13 @@ class TestRetailShop(FrappeTestCase):
 		self.assertEqual(data["roles"], [TECHNICAL_ADMIN_ROLE, SHOP_ADMIN_ROLE, SALESPERSON_ROLE])
 		self.assertTrue(any(row["username"] == username for row in data["users"]))
 
+	def test_staff_password_is_required(self):
+		from retail_shop.api.shop_users import create_shop_user
+		from retail_shop.setup.defaults import SALESPERSON_ROLE
+
+		with self.assertRaises(frappe.ValidationError):
+			create_shop_user(f"nopassword{uuid4().hex[:6]}", "", SALESPERSON_ROLE)
+
 	def test_shop_admin_can_only_create_salesperson(self):
 		from retail_shop.api.shop_users import create_shop_user
 		from retail_shop.setup.defaults import SALESPERSON_ROLE, SHOP_ADMIN_ROLE, TECHNICAL_ADMIN_ROLE
@@ -216,6 +223,12 @@ class TestRetailShop(FrappeTestCase):
 		self.assertIn("Stock Count", labels)
 		self.assertIn("Products", labels)
 		self.assertIn("Categories", labels)
+		self.assertIn("New Sale", labels)
+		self.assertIn("Sales History", labels)
+		self.assertIn("Credit Sales", labels)
+		self.assertNotIn("Point of Sale", labels)
+		self.assertNotIn("Counter Sales", labels)
+		self.assertNotIn("Sales Invoice", labels)
 		self.assertNotIn("Purchase Receipt", labels)
 		self.assertNotIn("Warehouse", labels)
 		self.assertNotIn("Item", labels)

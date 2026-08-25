@@ -12,7 +12,7 @@ class ShopUsersPage {
 	constructor(page) {
 		this.page = page;
 		this.roles = [];
-		this.page.set_primary_action(__("New User"), () => this.show_new_dialog(), "add");
+		this.page.set_primary_action(__("New Staff"), () => this.show_new_dialog(), "add");
 		this.refresh();
 	}
 
@@ -35,6 +35,7 @@ class ShopUsersPage {
 			return;
 		}
 
+		const $table_wrapper = $('<div class="retail-shop-users-table"></div>').appendTo($wrapper);
 		const $table = $(`
 			<table class="table table-bordered">
 				<thead>
@@ -49,7 +50,7 @@ class ShopUsersPage {
 				</thead>
 				<tbody></tbody>
 			</table>
-		`).appendTo($wrapper);
+		`).appendTo($table_wrapper);
 		const $tbody = $table.find("tbody");
 
 		rows.forEach((row) => {
@@ -81,25 +82,37 @@ class ShopUsersPage {
 
 	show_new_dialog() {
 		const dialog = new frappe.ui.Dialog({
-			title: __("New User"),
+			title: __("Onboard Staff Member"),
 			fields: [
-				{ fieldname: "username", label: __("Username"), fieldtype: "Data", reqd: 1 },
+				{
+					fieldname: "username",
+					label: __("Username"),
+					fieldtype: "Data",
+					reqd: 1,
+					description: __("Used by the staff member to sign in."),
+				},
 				{
 					fieldname: "role",
 					label: __("Role"),
 					fieldtype: "Select",
 					options: this.roles.join("\n"),
 					reqd: 1,
-					default: this.roles[0],
+					default: this.roles.includes("Salesperson") ? "Salesperson" : this.roles[0],
 				},
 				{
 					fieldname: "email",
-					label: __("Email"),
+					label: __("Email (Optional)"),
 					fieldtype: "Data",
 					options: "Email",
-					description: __("Optional. Leave empty if they have no email."),
+					description: __("Leave empty when the staff member does not use email."),
 				},
-				{ fieldname: "password", label: __("Password"), fieldtype: "Password", reqd: 1 },
+				{
+					fieldname: "password",
+					label: __("Password"),
+					fieldtype: "Password",
+					reqd: 1,
+					description: __("Required. Use at least 6 characters."),
+				},
 				{
 					fieldname: "confirm_password",
 					label: __("Confirm Password"),
@@ -107,7 +120,7 @@ class ShopUsersPage {
 					reqd: 1,
 				},
 			],
-			primary_action_label: __("Create"),
+			primary_action_label: __("Create Staff Account"),
 			primary_action: (values) => {
 				if (values.password !== values.confirm_password) {
 					frappe.msgprint(__("Passwords do not match."));

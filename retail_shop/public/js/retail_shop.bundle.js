@@ -9,12 +9,6 @@ frappe.ui.toggle_like = function () {};
 
 retail_shop.visible_workspaces = ["KBM Lighting Trading"];
 retail_shop.home_workspace = "KBM Lighting Trading";
-retail_shop.primary_shortcuts = new Set([
-	"Point of Sale",
-	"Counter Sales",
-	"Sales Invoice",
-	"Stock Balance",
-]);
 retail_shop.section_meta = {
 	"Sales Counter": {
 		slug: "sales-counter",
@@ -51,9 +45,9 @@ retail_shop.section_meta = {
 	},
 };
 retail_shop.link_meta = {
-	"Point of Sale": "Open the live cashier workspace.",
-	"Counter Sales": "Review or create counter sales slips.",
-	"Sales Invoice": "Handle standard billed sales.",
+	"New Sale": "Open the cashier and start a sale.",
+	"Sales History": "Review completed counter sales.",
+	"Credit Sales": "Create or review customer credit sales.",
 	"Stock Balance": "Check current availability before selling.",
 	"Stock In": "Record supplier purchases and add stock.",
 	"Stock Count": "Correct counted stock differences.",
@@ -77,241 +71,6 @@ retail_shop.link_meta = {
 	"Mode of Payment": "Manage accepted payment methods.",
 };
 
-retail_shop.ensure_workspace_styles = function () {
-	if (document.getElementById("retail-shop-workspace-styles")) {
-		return;
-	}
-
-	const style = document.createElement("style");
-	style.id = "retail-shop-workspace-styles";
-	style.textContent = `
-		body.retail-shop-home-active .layout-main-section .editor-js-container {
-			padding: 0 !important;
-		}
-
-		body.retail-shop-home-active .layout-main-section .widget.links-widget-box.retail-shop-card {
-			height: 100%;
-			padding: 0 !important;
-			border: 0 !important;
-			border-radius: 0 !important;
-			background: transparent !important;
-			box-shadow: none !important;
-		}
-
-		body.retail-shop-home-active .layout-main-section .retail-shop-tabs-shell {
-			margin-bottom: 1.1rem;
-			padding-bottom: 0.6rem;
-			border-bottom: 1px solid rgba(111, 78, 55, 0.14);
-		}
-
-		body.retail-shop-home-active .layout-main-section .retail-shop-tabs {
-			display: flex;
-			flex-wrap: wrap;
-			gap: 0.4rem;
-		}
-
-		body.retail-shop-home-active .layout-main-section .retail-shop-tab {
-			display: flex;
-			align-items: center;
-			gap: 0.5rem;
-			padding: 0.45rem 0.85rem;
-			border: 0;
-			border-radius: 999px;
-			background: transparent;
-			color: #6e6255;
-			font-size: 0.88rem;
-			font-weight: 600;
-			text-align: left;
-			transition: background-color 0.18s ease, color 0.18s ease;
-		}
-
-		body.retail-shop-home-active .layout-main-section .retail-shop-tab:hover,
-		body.retail-shop-home-active .layout-main-section .retail-shop-tab:focus-visible {
-			background: rgba(111, 78, 55, 0.06);
-			outline: none;
-		}
-
-		body.retail-shop-home-active .layout-main-section .retail-shop-tab.is-active {
-			background: rgba(180, 138, 92, 0.16);
-			color: #241d18;
-		}
-
-		body.retail-shop-home-active .layout-main-section .retail-shop-tab-title {
-			line-height: 1.2;
-		}
-
-		body.retail-shop-home-active .layout-main-section .retail-shop-tab-panels {
-			margin-top: 0;
-		}
-
-		body.retail-shop-home-active .layout-main-section .retail-shop-tab-panel {
-			display: none !important;
-			width: 100% !important;
-			max-width: none !important;
-			padding: 0 !important;
-		}
-
-		body.retail-shop-home-active .layout-main-section .retail-shop-tab-panel.is-active {
-			display: block !important;
-		}
-
-		body.retail-shop-home-active .layout-main-section .widget.links-widget-box.retail-shop-card .widget-head {
-			display: block !important;
-			margin-bottom: 0.75rem !important;
-			padding-bottom: 0.6rem !important;
-			border-bottom: 1px solid rgba(111, 78, 55, 0.1) !important;
-		}
-
-		body.retail-shop-home-active .layout-main-section .retail-shop-card-kicker-row {
-			display: flex;
-			align-items: center;
-			justify-content: space-between;
-			gap: 0.75rem;
-			margin-bottom: 0.55rem;
-		}
-
-		body.retail-shop-home-active .layout-main-section .retail-shop-card-kicker {
-			display: inline-flex;
-			align-items: center;
-			padding: 0.22rem 0.55rem;
-			border-radius: 999px;
-			background: rgba(186, 151, 112, 0.12);
-			color: #8a6844;
-			font-size: 0.72rem;
-			font-weight: 700;
-			letter-spacing: 0.12em;
-			text-transform: uppercase;
-		}
-
-		body.retail-shop-home-active .layout-main-section .retail-shop-card-count {
-			display: inline-flex;
-			align-items: center;
-			justify-content: center;
-			min-width: 2rem;
-			height: 2rem;
-			padding: 0 0.55rem;
-			border-radius: 999px;
-			background: rgba(41, 31, 23, 0.06);
-			color: #57493d;
-			font-size: 0.82rem;
-			font-weight: 700;
-		}
-
-		body.retail-shop-home-active .layout-main-section .widget.links-widget-box.retail-shop-card .widget-title {
-			font-size: 1.35rem !important;
-			font-weight: 700 !important;
-			letter-spacing: -0.03em !important;
-			line-height: 1.1 !important;
-		}
-
-		body.retail-shop-home-active .layout-main-section .widget.links-widget-box.retail-shop-card--primary .widget-title {
-			font-size: 1.55rem !important;
-		}
-
-		body.retail-shop-home-active .layout-main-section .widget.links-widget-box.retail-shop-card .card-description-btn {
-			display: none !important;
-		}
-
-		body.retail-shop-home-active .layout-main-section .retail-shop-tab-panel .widget-title,
-		body.retail-shop-home-active .layout-main-section .retail-shop-tab-panel .retail-shop-card-kicker-row {
-			display: none !important;
-		}
-
-		body.retail-shop-home-active .layout-main-section .retail-shop-tab-panel .widget-head {
-			margin-bottom: 0.6rem !important;
-			padding-bottom: 0 !important;
-			border-bottom: 0 !important;
-		}
-
-		body.retail-shop-home-active .layout-main-section .retail-shop-card-description {
-			margin-top: 0.45rem;
-			font-size: 0.89rem;
-			line-height: 1.45;
-			color: #6e675d;
-		}
-
-		body.retail-shop-home-active .layout-main-section .retail-shop-card-body {
-			display: grid !important;
-			grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr)) !important;
-			gap: 0.75rem !important;
-		}
-
-		body.retail-shop-home-active .layout-main-section .retail-shop-link-tile {
-			display: flex !important;
-			align-items: stretch !important;
-			min-height: 4rem;
-			margin: 0 !important;
-			padding: 0 !important;
-			border: 0 !important;
-			border-radius: 0.85rem !important;
-			background: #fffdf9 !important;
-			box-shadow: none !important;
-			text-decoration: none !important;
-			overflow: hidden !important;
-			transition: background-color 0.18s ease !important;
-		}
-
-		body.retail-shop-home-active .layout-main-section .retail-shop-link-tile:hover,
-		body.retail-shop-home-active .layout-main-section .retail-shop-link-tile:focus-visible {
-			background: #fdf9f2 !important;
-			text-decoration: none !important;
-			outline: none !important;
-		}
-
-		body.retail-shop-home-active .layout-main-section .retail-shop-link-tile .link-content {
-			display: flex !important;
-			align-items: flex-start !important;
-			justify-content: space-between !important;
-			width: 100% !important;
-			padding: 0.95rem 1rem !important;
-			gap: 0.75rem !important;
-		}
-
-		body.retail-shop-home-active .layout-main-section .retail-shop-link-copy {
-			display: flex;
-			flex-direction: column;
-			align-items: flex-start;
-			gap: 0.22rem;
-			min-width: 0;
-			flex: 1;
-		}
-
-		body.retail-shop-home-active .layout-main-section .retail-shop-link-tile .link-text,
-		body.retail-shop-home-active .layout-main-section .retail-shop-link-title {
-			font-size: 0.98rem !important;
-			font-weight: 600 !important;
-			line-height: 1.28 !important;
-			white-space: normal !important;
-			transition: font-weight 0.18s ease, color 0.18s ease !important;
-		}
-
-		body.retail-shop-home-active .layout-main-section .retail-shop-link-tile--primary .link-text,
-		body.retail-shop-home-active .layout-main-section .retail-shop-link-tile--primary .retail-shop-link-title {
-			font-size: 1.04rem !important;
-		}
-
-		body.retail-shop-home-active .layout-main-section .retail-shop-link-description {
-			font-size: 0.78rem;
-			line-height: 1.4;
-			color: #7a6c5d;
-			white-space: normal;
-		}
-
-		body.retail-shop-home-active .layout-main-section .retail-shop-link-tile:hover .link-text,
-		body.retail-shop-home-active .layout-main-section .retail-shop-link-tile:focus-visible .link-text,
-		body.retail-shop-home-active .layout-main-section .retail-shop-link-tile:hover .retail-shop-link-title,
-		body.retail-shop-home-active .layout-main-section .retail-shop-link-tile:focus-visible .retail-shop-link-title {
-			font-weight: 700 !important;
-			color: #2d241b !important;
-		}
-
-		body.retail-shop-home-active .layout-main-section .retail-shop-link-tile .es-icon {
-			display: none !important;
-		}
-	`;
-
-	document.head.appendChild(style);
-};
 
 retail_shop.get_user_roles = function () {
 	return frappe.boot?.user?.roles || [];
@@ -465,7 +224,6 @@ retail_shop.is_retail_workspace_surface = function () {
 };
 
 retail_shop.sync_workspace_page_state = function () {
-	retail_shop.ensure_workspace_styles();
 	const context = retail_shop.get_workspace_context();
 	const is_retail_route = retail_shop.is_retail_workspace_surface();
 	const allow_workspace_filtering = retail_shop.should_filter_home_workspace();
@@ -810,7 +568,7 @@ retail_shop.decorate_retail_workspace = function () {
 	}
 
 	retail_shop.decorating_workspace = true;
-	// decorate_native_workspace_cards / wrap_workspace_sections / build_tabbed_workspace
+	// decorate_native_workspace_cards / build_tabbed_workspace
 	// always tear down and rebuild markup, even when nothing conceptually changed.
 	// Without pausing the observer, every one of those writes would be picked up by
 	// observe_workspace_widgets' MutationObserver and re-trigger this function forever.
@@ -822,27 +580,12 @@ retail_shop.decorate_retail_workspace = function () {
 			document.body.classList.contains("retail-shop-home-active") ||
 			retail_shop.is_retail_workspace_surface();
 		retail_shop.decorate_native_workspace_cards(is_retail_home);
-		retail_shop.unwrap_workspace_sections();
 
 		if (!is_retail_home) {
 			return;
 		}
 
-		retail_shop.wrap_workspace_sections();
 		retail_shop.build_tabbed_workspace();
-
-		document.querySelectorAll(".layout-main-section .widget.shortcut-widget-box").forEach((widget) => {
-			const title = widget.querySelector(".widget-title")?.textContent?.trim() || "";
-			const card = widget.closest(".retail-shop-section-card");
-			const is_primary_shortcut =
-				card?.dataset.section === "sales-counter" && retail_shop.primary_shortcuts.has(title);
-
-			widget.classList.toggle("retail-shop-primary-shortcut", is_primary_shortcut);
-			widget.classList.toggle(
-				"retail-shop-secondary-shortcut",
-				Boolean(title) && !is_primary_shortcut
-			);
-		});
 	} finally {
 		retail_shop.decorating_workspace = false;
 		retail_shop.workspace_widget_observer?.observe(document.body, {
@@ -850,77 +593,6 @@ retail_shop.decorate_retail_workspace = function () {
 			subtree: true,
 		});
 	}
-};
-
-retail_shop.unwrap_workspace_sections = function () {
-	document.querySelectorAll(".retail-shop-section-card").forEach((card) => {
-		const redactor = card.parentElement;
-		if (!redactor) {
-			return;
-		}
-
-		const nodes = Array.from(card.querySelectorAll(":scope > .retail-shop-section-card__header > .ce-block, :scope > .retail-shop-section-card__body > .ce-block"));
-		nodes.forEach((node) => redactor.insertBefore(node, card));
-		card.remove();
-	});
-};
-
-retail_shop.wrap_workspace_sections = function () {
-	const redactor = document.querySelector(".layout-main-section .codex-editor__redactor");
-	if (!redactor) {
-		return;
-	}
-
-	let current_body = null;
-	Array.from(redactor.children).forEach((block) => {
-		if (!block.classList.contains("ce-block")) {
-			return;
-		}
-
-		const header = block.querySelector(".ce-header");
-		const is_spacer = Boolean(block.querySelector(".widget.spacer"));
-
-		block.classList.remove("retail-shop-section-break");
-
-		if (header) {
-			const title = header.textContent?.trim() || "";
-			const meta = retail_shop.section_meta[title];
-			const section_slug = meta?.slug || frappe.router.slug(title || "section");
-			const card = document.createElement("section");
-			const header_container = document.createElement("div");
-			const body_container = document.createElement("div");
-
-			card.className = `retail-shop-section-card retail-shop-section-card--${section_slug}`;
-			card.dataset.section = section_slug;
-			header_container.className = "retail-shop-section-card__header";
-			body_container.className = "retail-shop-section-card__body";
-
-			redactor.insertBefore(card, block);
-			card.appendChild(header_container);
-			card.appendChild(body_container);
-			header_container.appendChild(block);
-
-			if (meta?.description) {
-				const note = document.createElement("p");
-				note.className = "retail-shop-section-card__note";
-				note.textContent = meta.description;
-				header_container.appendChild(note);
-			}
-
-			current_body = body_container;
-			return;
-		}
-
-		if (is_spacer) {
-			block.classList.add("retail-shop-section-break");
-			current_body = null;
-			return;
-		}
-
-		if (current_body) {
-			current_body.appendChild(block);
-		}
-	});
 };
 
 retail_shop.schedule_workspace_decoration = function () {
@@ -951,7 +623,6 @@ retail_shop.observe_workspace_widgets = function () {
 };
 
 retail_shop.init_workspace_customizations = function () {
-	retail_shop.ensure_workspace_styles();
 	retail_shop.clear_stale_workspace_state();
 	retail_shop.patch_home_route();
 	retail_shop.patch_sidebar_xcall();

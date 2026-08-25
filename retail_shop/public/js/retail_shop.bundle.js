@@ -13,7 +13,6 @@ retail_shop.primary_shortcuts = new Set([
 	"Point of Sale",
 	"Counter Sales",
 	"Sales Invoice",
-	"Purchase Receipt",
 	"Stock Balance",
 ]);
 retail_shop.section_meta = {
@@ -26,7 +25,7 @@ retail_shop.section_meta = {
 	"Back Office": {
 		slug: "back-office",
 		kicker: "Operations",
-		description: "Inventory adjustment, receiving, and commission settlement.",
+		description: "Stock in, stock count, and commission settlement.",
 	},
 	"Reports & Audit": {
 		slug: "reports-audit",
@@ -36,7 +35,7 @@ retail_shop.section_meta = {
 	"Catalog & Contacts": {
 		slug: "catalog-contacts",
 		kicker: "Directory",
-		description: "Products, partners, electricians, and warehouse references.",
+		description: "Products, categories, electricians, customers, and suppliers.",
 	},
 	"Staff Management": {
 		slug: "staff-management",
@@ -55,10 +54,9 @@ retail_shop.link_meta = {
 	"Point of Sale": "Open the live cashier workspace.",
 	"Counter Sales": "Review or create counter sales slips.",
 	"Sales Invoice": "Handle standard billed sales.",
-	"Purchase Receipt": "Receive incoming supplier stock.",
 	"Stock Balance": "Check current availability before selling.",
-	"Purchase Entry": "Record supplier purchases in one place.",
-	"Stock Reconciliation": "Correct counted stock differences.",
+	"Stock In": "Record supplier purchases and add stock.",
+	"Stock Count": "Correct counted stock differences.",
 	"Commission Payment": "Settle electrician commissions.",
 	"Sales Report": "Track sales volume and momentum.",
 	"Profit Report": "See margin performance by transaction.",
@@ -68,11 +66,11 @@ retail_shop.link_meta = {
 	"Purchase Report": "Monitor purchasing activity and trends.",
 	"Electrician Commission Report": "Audit electrician earnings.",
 	"Retail Audit Log": "Inspect sensitive retail changes.",
-	"Item": "Manage sellable products and details.",
+	"Products": "Manage sellable products and prices.",
+	"Categories": "Group products such as bulbs, switches, and cable.",
 	"Electrician": "Maintain electrician records and rates.",
 	"Customer": "Create and update customer profiles.",
 	"Supplier": "Maintain supplier information.",
-	"Warehouse": "Manage stock locations and stores.",
 	"User": "Manage staff accounts and login access.",
 	"Sales Staff": "Onboard, enable, disable, or reset passwords for salesperson accounts.",
 	"Retail Shop Settings": "Configure default store behavior.",
@@ -338,7 +336,7 @@ retail_shop.has_any_role = function (roles) {
 // lets .d-lg-block win at desktop widths. Setting the inline style directly
 // with !important priority always beats a stylesheet rule, important or not.
 retail_shop.hide_help_dropdown_for_non_technical_users = function () {
-	if (retail_shop.has_any_role(["Administrator", "System Manager"])) {
+	if (retail_shop.has_any_role(["Administrator", "System Manager", "Technical Admin"])) {
 		return;
 	}
 	document.querySelectorAll(".dropdown-help").forEach((el) => {
@@ -347,18 +345,18 @@ retail_shop.hide_help_dropdown_for_non_technical_users = function () {
 };
 
 retail_shop.should_filter_home_workspace = function () {
-	return retail_shop.has_any_role(["Retail Administrator", "Retail Salesperson"]);
+	return retail_shop.has_any_role(["Shop Admin", "Salesperson"]);
 };
 
 retail_shop.is_retail_admin = function () {
-	return retail_shop.has_any_role(["Retail Administrator"]);
+	return retail_shop.has_any_role(["Shop Admin"]);
 };
 
 retail_shop.get_visible_workspaces = function () {
 	const visible = [...retail_shop.visible_workspaces];
 	if (retail_shop.is_retail_admin()) {
-		// Staff (User management) stays out of this list even for the
-		// Retail Administrator: it's technical-admin-only (System Manager).
+		// Staff (User management) stays out of this list even for Shop Admin:
+		// it's technical-admin-only.
 		visible.push("Store Settings");
 	}
 	return visible;

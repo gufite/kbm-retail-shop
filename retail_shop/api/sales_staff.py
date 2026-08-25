@@ -1,17 +1,16 @@
 import frappe
 from frappe import _
 
-from retail_shop.setup.defaults import RETAIL_ADMIN_ROLE, RETAIL_SALESPERSON_ROLE
+from retail_shop.setup.defaults import SHOP_ADMIN_ROLE, SALESPERSON_ROLE, TECHNICAL_ADMIN_ROLE
 
-# Roles that make an account "technical" or another admin — never manageable
-# through this narrow tool, even if they also happen to hold the Salesperson
-# role. Keeps a Retail Administrator from touching System Manager accounts
-# (or each other) through the back door of this API.
-_PROTECTED_ROLES = {"System Manager", RETAIL_ADMIN_ROLE}
+# Never manageable through this Shop Admin tool, even if they also hold
+# Salesperson. Keeps Shop Admin from touching Technical Admin or other
+# Shop Admin accounts through the back door of this API.
+_PROTECTED_ROLES = {TECHNICAL_ADMIN_ROLE, "System Manager", SHOP_ADMIN_ROLE}
 
 
-def _ensure_caller_is_retail_admin():
-	if RETAIL_ADMIN_ROLE not in frappe.get_roles():
+def _ensure_caller_is_shop_admin():
+	if SHOP_ADMIN_ROLE not in frappe.get_roles():
 		frappe.throw(_("Not permitted"), frappe.PermissionError)
 
 
@@ -20,7 +19,7 @@ def _is_managed_salesperson(user: str) -> bool:
 		return False
 
 	roles = set(frappe.get_roles(user))
-	if RETAIL_SALESPERSON_ROLE not in roles:
+	if SALESPERSON_ROLE not in roles:
 		return False
 
 	return not roles.intersection(_PROTECTED_ROLES)
@@ -28,8 +27,8 @@ def _is_managed_salesperson(user: str) -> bool:
 
 @frappe.whitelist()
 def list_sales_staff():
-	"""Every Salesperson-only account a Retail Administrator is allowed to manage."""
-	_ensure_caller_is_retail_admin()
+	"""Every Salesperson-only account a Shop Admin is allowed to manage."""
+	_ensure_caller_is_shop_admin()
 
 	users = frappe.get_all(
 		"User",
@@ -42,7 +41,7 @@ def list_sales_staff():
 
 @frappe.whitelist()
 def create_sales_staff(full_name: str, email: str):
-	_ensure_caller_is_retail_admin()
+	_ensure_caller_is_shop_admin()
 
 	full_name = (full_name or "").strip()
 	email = (email or "").strip().lower()
@@ -63,7 +62,7 @@ def create_sales_staff(full_name: str, email: str):
 			"full_name": full_name,
 			"user_type": "System User",
 			"send_welcome_email": 1,
-			"roles": [{"role": RETAIL_SALESPERSON_ROLE}],
+			"roles": [{"role": SALESPERSON_ROLE}],
 		}
 	)
 	doc.insert(ignore_permissions=True)
@@ -72,7 +71,7 @@ def create_sales_staff(full_name: str, email: str):
 
 @frappe.whitelist()
 def set_sales_staff_enabled(user: str, enabled):
-	_ensure_caller_is_retail_admin()
+	_ensure_caller_is_shop_admin()
 
 	if not _is_managed_salesperson(user):
 		frappe.throw(_("You can only manage Salesperson accounts."), frappe.PermissionError)
@@ -82,7 +81,7 @@ def set_sales_staff_enabled(user: str, enabled):
 
 @frappe.whitelist()
 def reset_sales_staff_password(user: str):
-	_ensure_caller_is_retail_admin()
+	_ensure_caller_is_shop_admin()
 
 	if not _is_managed_salesperson(user):
 		frappe.throw(_("You can only manage Salesperson accounts."), frappe.PermissionError)

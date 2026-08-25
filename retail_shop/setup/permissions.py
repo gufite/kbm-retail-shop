@@ -1,7 +1,7 @@
 import frappe
 from frappe.permissions import add_permission, update_permission_property
 
-from retail_shop.setup.defaults import RETAIL_ADMIN_ROLE, RETAIL_SALESPERSON_ROLE
+from retail_shop.setup.defaults import SHOP_ADMIN_ROLE, SALESPERSON_ROLE, TECHNICAL_ADMIN_ROLE, TECHNICAL_ADMIN_ROLE
 
 
 PERM_TYPES = (
@@ -32,11 +32,11 @@ def ensure_permissions():
 # doctype permissions don't matter if the Point of Sale *page* itself
 # rejects the role first. Add our roles wherever the SRS needs that page.
 PAGE_ACCESS = {
-	"point-of-sale": (RETAIL_ADMIN_ROLE, RETAIL_SALESPERSON_ROLE),
-	"stock-balance": (RETAIL_ADMIN_ROLE, RETAIL_SALESPERSON_ROLE),
+	"point-of-sale": (SHOP_ADMIN_ROLE, SALESPERSON_ROLE),
+	"stock-balance": (SHOP_ADMIN_ROLE, SALESPERSON_ROLE),
 	# Narrow salesperson-account management tool (retail_shop.api.sales_staff)
 	# — deliberately admin-only, unlike the two rows above.
-	"sales-staff": (RETAIL_ADMIN_ROLE,),
+	"sales-staff": (SHOP_ADMIN_ROLE,),
 }
 
 
@@ -79,76 +79,76 @@ def _permission_map():
 	}
 	return {
 		"Electrician": {
-			RETAIL_ADMIN_ROLE: admin_full,
-			RETAIL_SALESPERSON_ROLE: {"read": 1, "report": 1},
+			SHOP_ADMIN_ROLE: admin_full,
+			SALESPERSON_ROLE: {"read": 1, "report": 1},
 		},
 		"Retail Commission Settings": {
-			RETAIL_ADMIN_ROLE: admin_full,
+			SHOP_ADMIN_ROLE: admin_full,
 		},
 		"Retail Shop Settings": {
-			RETAIL_ADMIN_ROLE: admin_full,
+			SHOP_ADMIN_ROLE: admin_full,
 		},
 		"Purchase Entry": {
-			RETAIL_ADMIN_ROLE: admin_full,
+			SHOP_ADMIN_ROLE: admin_full,
 		},
 		"Company": {
 			# Read-only: needed to select the company in the standard POS
 			# opening-shift dialog. Company management itself isn't an
 			# SRS admin task, so no write access.
-			RETAIL_ADMIN_ROLE: {"read": 1},
-			RETAIL_SALESPERSON_ROLE: {"read": 1},
+			SHOP_ADMIN_ROLE: {"read": 1},
+			SALESPERSON_ROLE: {"read": 1},
 		},
 		# Read-only master-data lookups the Sales/POS Invoice engine itself
 		# needs (default accounts, currency, cost center, valuation
 		# settings) — none of these are SRS-level admin tasks, so read
 		# only, same as Company above.
 		"Stock Settings": {
-			RETAIL_ADMIN_ROLE: {"read": 1},
-			RETAIL_SALESPERSON_ROLE: {"read": 1},
+			SHOP_ADMIN_ROLE: {"read": 1},
+			SALESPERSON_ROLE: {"read": 1},
 		},
 		"Currency": {
-			RETAIL_ADMIN_ROLE: {"read": 1},
-			RETAIL_SALESPERSON_ROLE: {"read": 1},
+			SHOP_ADMIN_ROLE: {"read": 1},
+			SALESPERSON_ROLE: {"read": 1},
 		},
 		"Account": {
-			RETAIL_ADMIN_ROLE: {"read": 1},
-			RETAIL_SALESPERSON_ROLE: {"read": 1},
+			SHOP_ADMIN_ROLE: {"read": 1},
+			SALESPERSON_ROLE: {"read": 1},
 		},
 		"Cost Center": {
-			RETAIL_ADMIN_ROLE: {"read": 1},
-			RETAIL_SALESPERSON_ROLE: {"read": 1},
+			SHOP_ADMIN_ROLE: {"read": 1},
+			SALESPERSON_ROLE: {"read": 1},
 		},
 		"POS Settings": {
-			RETAIL_ADMIN_ROLE: {"read": 1},
-			RETAIL_SALESPERSON_ROLE: {"read": 1},
+			SHOP_ADMIN_ROLE: {"read": 1},
+			SALESPERSON_ROLE: {"read": 1},
 		},
 		"Mode of Payment": {
-			RETAIL_ADMIN_ROLE: {"read": 1},
-			RETAIL_SALESPERSON_ROLE: {"read": 1},
+			SHOP_ADMIN_ROLE: {"read": 1},
+			SALESPERSON_ROLE: {"read": 1},
 		},
 		"UOM": {
-			RETAIL_ADMIN_ROLE: admin_full,
-			RETAIL_SALESPERSON_ROLE: {"read": 1},
+			SHOP_ADMIN_ROLE: admin_full,
+			SALESPERSON_ROLE: {"read": 1},
 		},
 		"Item Group": {
-			RETAIL_ADMIN_ROLE: admin_full,
-			RETAIL_SALESPERSON_ROLE: {"read": 1, "report": 1},
+			SHOP_ADMIN_ROLE: admin_full,
+			SALESPERSON_ROLE: {"read": 1, "report": 1},
 		},
 		"Brand": {
-			RETAIL_ADMIN_ROLE: admin_full,
-			RETAIL_SALESPERSON_ROLE: {"read": 1},
+			SHOP_ADMIN_ROLE: admin_full,
+			SALESPERSON_ROLE: {"read": 1},
 		},
 		"Item Tax Template": {
-			RETAIL_ADMIN_ROLE: admin_full,
-			RETAIL_SALESPERSON_ROLE: {"read": 1},
+			SHOP_ADMIN_ROLE: admin_full,
+			SALESPERSON_ROLE: {"read": 1},
 		},
 		"Price List": {
-			RETAIL_ADMIN_ROLE: {"read": 1},
-			RETAIL_SALESPERSON_ROLE: {"read": 1},
+			SHOP_ADMIN_ROLE: {"read": 1},
+			SALESPERSON_ROLE: {"read": 1},
 		},
 		"Item Price": {
-			RETAIL_ADMIN_ROLE: {"read": 1},
-			RETAIL_SALESPERSON_ROLE: {"read": 1},
+			SHOP_ADMIN_ROLE: {"read": 1},
+			SALESPERSON_ROLE: {"read": 1},
 		},
 		# Workspace layout (the "KBM Lighting Trading" home screen and its
 		# tabs/cards) is technical/developer-owned, not a shop-admin task —
@@ -168,19 +168,20 @@ def _permission_map():
 			# here too, or it silently survives as a leftover Custom DocPerm
 			# row underneath our own roles below.
 			"Desk User": {"read": 1},
-			RETAIL_ADMIN_ROLE: {"read": 1},
-			RETAIL_SALESPERSON_ROLE: {"read": 1},
+			TECHNICAL_ADMIN_ROLE: {"read": 1},
+			SHOP_ADMIN_ROLE: {"read": 1},
+			SALESPERSON_ROLE: {"read": 1},
 		},
 		# Customer Group / Territory: the Customer quick-entry dialog on the
 		# POS screen requires read on both to populate/select them, even
 		# though a salesperson never manages the groups/territories themselves.
 		"Customer Group": {
-			RETAIL_ADMIN_ROLE: {"read": 1},
-			RETAIL_SALESPERSON_ROLE: {"read": 1},
+			SHOP_ADMIN_ROLE: {"read": 1},
+			SALESPERSON_ROLE: {"read": 1},
 		},
 		"Territory": {
-			RETAIL_ADMIN_ROLE: {"read": 1},
-			RETAIL_SALESPERSON_ROLE: {"read": 1},
+			SHOP_ADMIN_ROLE: {"read": 1},
+			SALESPERSON_ROLE: {"read": 1},
 		},
 		"Page": {
 			# Generic doctype-level read is required in addition to the
@@ -189,20 +190,20 @@ def _permission_map():
 			# Point of Sale shortcut) is silently dropped from the
 			# permission-filtered shortcut list even though the page
 			# itself is directly reachable by URL.
-			RETAIL_ADMIN_ROLE: {"read": 1},
-			RETAIL_SALESPERSON_ROLE: {"read": 1},
+			SHOP_ADMIN_ROLE: {"read": 1},
+			SALESPERSON_ROLE: {"read": 1},
 		},
 		"POS Profile": {
-			RETAIL_ADMIN_ROLE: {"read": 1},
-			RETAIL_SALESPERSON_ROLE: {"read": 1},
+			SHOP_ADMIN_ROLE: {"read": 1},
+			SALESPERSON_ROLE: {"read": 1},
 		},
 		# Needed by api.sales.record_credit_payments, which creates and
 		# submits a Payment Entry against a credit Sales Invoice — without
 		# this, that whitelisted call throws a PermissionError for every
 		# caller (neither role had any grant on this doctype before).
 		"Payment Entry": {
-			RETAIL_ADMIN_ROLE: admin_full,
-			RETAIL_SALESPERSON_ROLE: {
+			SHOP_ADMIN_ROLE: admin_full,
+			SALESPERSON_ROLE: {
 				# No cancel/amend: only an Administrator may void or correct a completed payment.
 				"read": 1,
 				"create": 1,
@@ -213,16 +214,16 @@ def _permission_map():
 			},
 		},
 		"POS Opening Entry": {
-			RETAIL_ADMIN_ROLE: admin_full,
-			RETAIL_SALESPERSON_ROLE: {"read": 1, "create": 1, "write": 1, "submit": 1},
+			SHOP_ADMIN_ROLE: admin_full,
+			SALESPERSON_ROLE: {"read": 1, "create": 1, "write": 1, "submit": 1},
 		},
 		"POS Closing Entry": {
-			RETAIL_ADMIN_ROLE: admin_full,
-			RETAIL_SALESPERSON_ROLE: {"read": 1, "create": 1, "write": 1, "submit": 1},
+			SHOP_ADMIN_ROLE: admin_full,
+			SALESPERSON_ROLE: {"read": 1, "create": 1, "write": 1, "submit": 1},
 		},
 		"POS Invoice": {
-			RETAIL_ADMIN_ROLE: admin_full,
-			RETAIL_SALESPERSON_ROLE: {
+			SHOP_ADMIN_ROLE: admin_full,
+			SALESPERSON_ROLE: {
 				# No cancel/amend: only an Administrator may void or correct a completed sale.
 				"read": 1,
 				"create": 1,
@@ -234,8 +235,8 @@ def _permission_map():
 			},
 		},
 		"Sales Invoice": {
-			RETAIL_ADMIN_ROLE: admin_full,
-			RETAIL_SALESPERSON_ROLE: {
+			SHOP_ADMIN_ROLE: admin_full,
+			SALESPERSON_ROLE: {
 				# No cancel/amend: only an Administrator may void or correct a completed sale.
 				"read": 1,
 				"create": 1,
@@ -247,35 +248,35 @@ def _permission_map():
 			},
 		},
 		"Item": {
-			RETAIL_ADMIN_ROLE: admin_full,
-			RETAIL_SALESPERSON_ROLE: {"read": 1, "report": 1, "print": 1, "export": 1},
+			SHOP_ADMIN_ROLE: admin_full,
+			SALESPERSON_ROLE: {"read": 1, "report": 1, "print": 1, "export": 1},
 		},
 		"Warehouse": {
-			RETAIL_ADMIN_ROLE: admin_full,
-			RETAIL_SALESPERSON_ROLE: {"read": 1, "report": 1, "print": 1},
+			SHOP_ADMIN_ROLE: admin_full,
+			SALESPERSON_ROLE: {"read": 1, "report": 1, "print": 1},
 		},
 		"Supplier": {
-			RETAIL_ADMIN_ROLE: admin_full,
-			RETAIL_SALESPERSON_ROLE: {"read": 1},
+			SHOP_ADMIN_ROLE: admin_full,
+			SALESPERSON_ROLE: {"read": 1},
 		},
 		"Customer": {
-			RETAIL_ADMIN_ROLE: admin_full,
-			RETAIL_SALESPERSON_ROLE: {"read": 1, "create": 1, "write": 1},
+			SHOP_ADMIN_ROLE: admin_full,
+			SALESPERSON_ROLE: {"read": 1, "create": 1, "write": 1},
 		},
 		"Purchase Receipt": {
-			RETAIL_ADMIN_ROLE: admin_full,
+			SHOP_ADMIN_ROLE: admin_full,
 		},
 		"Stock Reconciliation": {
-			RETAIL_ADMIN_ROLE: admin_full,
+			SHOP_ADMIN_ROLE: admin_full,
 		},
 		"Commission Payment": {
-			RETAIL_ADMIN_ROLE: admin_full,
-			RETAIL_SALESPERSON_ROLE: {"read": 1, "report": 1, "print": 1, "email": 1},
+			SHOP_ADMIN_ROLE: admin_full,
+			SALESPERSON_ROLE: {"read": 1, "report": 1, "print": 1, "email": 1},
 		},
 		"Retail Audit Log": {
 			# Append-only: rows are only ever written by our own hooks via
 			# ignore_permissions, so no role gets create/write here — not even Admin.
-			RETAIL_ADMIN_ROLE: {"read": 1, "report": 1, "print": 1, "export": 1},
+			SHOP_ADMIN_ROLE: {"read": 1, "report": 1, "print": 1, "export": 1},
 		},
 	}
 

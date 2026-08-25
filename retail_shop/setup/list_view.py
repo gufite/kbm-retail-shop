@@ -22,7 +22,7 @@ LIST_VIEWS_WITHOUT_SOCIAL_FEATURES = (
 	"Electrician",
 	"Customer",
 	"Supplier",
-	"Warehouse",
+	"Item Group",
 	"Mode of Payment",
 )
 

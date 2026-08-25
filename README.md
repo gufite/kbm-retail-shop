@@ -74,12 +74,17 @@ bench --site <site> migrate
 
 ## Roles
 
-- `Retail Administrator`
-  - manages electricians, settings, purchase entry, and reports
-- `Retail Salesperson`
-  - can submit sales docs and read retail reports
+- `Technical Admin`
+  - system setup, raw user accounts, and Frappe/ERPNext configuration
+  - can create Shop Admin and Salesperson users
+- `Shop Admin`
+  - manages products, stock in, stock count, electricians, settings, and reports
+  - can create, enable, disable, and reset passwords for Salesperson accounts
+  - cannot change system settings or Technical Admin / Shop Admin accounts
+- `Salesperson`
+  - can submit sales and read retail reports
   - cannot change commission settings
-  - cannot create `Stock Reconciliation`
+  - cannot create stock counts or purchase entries
 
 ## Testing
 

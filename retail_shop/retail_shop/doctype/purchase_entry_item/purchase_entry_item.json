@@ -56,7 +56,8 @@
   {
    "fieldname": "uom",
    "fieldtype": "Link",
-   "in_list_view": 1,
+   "hidden": 1,
+   "in_list_view": 0,
    "label": "Purchase UOM",
    "options": "UOM"
   },
@@ -64,6 +65,7 @@
    "default": "1",
    "fieldname": "conversion_factor",
    "fieldtype": "Float",
+   "hidden": 1,
    "label": "Conversion Factor",
    "read_only": 1
   },

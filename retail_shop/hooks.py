@@ -26,6 +26,16 @@ after_install = "retail_shop.setup.install.after_install"
 after_migrate = "retail_shop.setup.install.after_migrate"
 before_tests = "retail_shop.setup.install.before_tests"
 
+doctype_js = {
+	"Purchase Entry": "public/js/purchase_entry.js",
+	"Item": "public/js/item.js",
+	"Stock Reconciliation": "public/js/stock_reconciliation.js",
+}
+doctype_list_js = {
+	"Item": "public/js/item.js",
+	"Stock Reconciliation": "public/js/stock_reconciliation.js",
+}
+
 doc_events = {
 	"POS Invoice": {
 		"validate": "retail_shop.utils.sales.validate_sales_doc",
@@ -38,6 +48,7 @@ doc_events = {
 		"on_cancel": "retail_shop.utils.sales.on_cancel_sales_doc",
 	},
 	"Stock Reconciliation": {
+		"before_validate": "retail_shop.utils.inventory.prepare_stock_count",
 		"validate": "retail_shop.utils.inventory.require_adjustment_reason",
 		"on_submit": "retail_shop.utils.inventory.log_stock_adjustment",
 	},
@@ -48,7 +59,10 @@ doc_events = {
 		"on_update": "retail_shop.utils.audit.log_electrician_commission_change",
 	},
 	"User": {
-		"validate": "retail_shop.setup.modules.apply_module_profile_to_user",
+		"validate": [
+			"retail_shop.setup.defaults.sync_technical_admin_role",
+			"retail_shop.setup.modules.apply_module_profile_to_user",
+		],
 		"on_update": [
 			"retail_shop.utils.audit.log_user_role_change",
 			"retail_shop.setup.modules.ensure_home_page_default",

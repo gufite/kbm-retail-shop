@@ -4,6 +4,7 @@ from frappe.model.document import Document
 from frappe.utils import flt, nowdate
 
 from retail_shop.setup.defaults import get_default_company
+from retail_shop.utils.products import default_stock_uom, update_product_prices
 
 
 class PurchaseEntry(Document):
@@ -22,7 +23,7 @@ class PurchaseEntry(Document):
 		for row in self.items:
 			self._ensure_product(row)
 			row.amount = flt(row.qty) * flt(row.unit_purchase_price)
-			row.conversion_factor = self._resolve_conversion_factor(row)
+			row.conversion_factor = 1
 			total_qty += flt(row.qty)
 			total_amount += flt(row.amount)
 
@@ -31,7 +32,7 @@ class PurchaseEntry(Document):
 
 		if flt(self.paid_amount) > flt(total_amount) + 0.005:
 			frappe.throw(
-				_("Paid Amount ({0}) cannot exceed the Purchase Entry's total amount ({1}).").format(
+				_("Paid Amount ({0}) cannot exceed the total amount ({1}).").format(
 					frappe.format_value(self.paid_amount, {"fieldtype": "Currency"}),
 					frappe.format_value(total_amount, {"fieldtype": "Currency"}),
 				)
@@ -46,17 +47,26 @@ class PurchaseEntry(Document):
 			self.payment_status = "Partial"
 
 	def _ensure_product(self, row):
-		"""Product Code upsert: an existing code restocks/repriced the same
+		"""Product Code upsert: an existing code restocks/reprices the same
 		product; a new code creates one. See SRS Sec. 5 / Stock Input spec."""
 		existing = frappe.db.get_value("Item", row.item_code, ["item_name", "stock_uom"], as_dict=True)
 
 		if existing:
 			# Duplicate product: keep the existing code & description as-is,
-			# only the prices move — the description typed on this row (if
-			# any) is discarded, not written back.
+			# only quantity and prices move — a description typed on this row
+			# (if any) is discarded, not written back.
+			if row.item_name and row.item_name != existing.item_name:
+				frappe.msgprint(
+					_(
+						"Product {0} already exists. Quantity will be added to current stock, "
+						"and the description will stay as {1}."
+					).format(frappe.bold(row.item_code), frappe.bold(existing.item_name)),
+					alert=True,
+					indicator="blue",
+				)
 			row.item_name = existing.item_name
-			row.uom = row.uom or existing.stock_uom
-			frappe.db.set_value("Item", row.item_code, "standard_rate", flt(row.selling_unit_price))
+			row.uom = existing.stock_uom
+			update_product_prices(row.item_code, row.unit_purchase_price, row.selling_unit_price)
 			return
 
 		if not row.item_name:
@@ -68,10 +78,10 @@ class PurchaseEntry(Document):
 
 		item_group = frappe.db.get_single_value("Retail Shop Settings", "default_item_group")
 		if not item_group:
-			frappe.throw(_("Retail Shop Settings requires a default Item Group for new products."))
+			frappe.throw(_("Retail Shop Settings requires a default category for new products."))
 
-		row.uom = row.uom or frappe.db.get_single_value("Stock Settings", "stock_uom") or "Nos"
-		frappe.get_doc(
+		row.uom = default_stock_uom()
+		item = frappe.get_doc(
 			{
 				"doctype": "Item",
 				"item_code": row.item_code,
@@ -80,24 +90,13 @@ class PurchaseEntry(Document):
 				"stock_uom": row.uom,
 				"is_stock_item": 1,
 				"standard_rate": flt(row.selling_unit_price),
+				"last_purchase_rate": flt(row.unit_purchase_price),
 			}
-		).insert(ignore_permissions=True)
-
-	def _resolve_conversion_factor(self, row) -> float:
-		stock_uom = frappe.db.get_value("Item", row.item_code, "stock_uom")
-		if not row.uom or row.uom == stock_uom:
-			return 1
-
-		conversion_factor = frappe.db.get_value(
-			"UOM Conversion Detail", {"parent": row.item_code, "uom": row.uom}, "conversion_factor"
 		)
-		if not conversion_factor:
-			frappe.throw(
-				_("Item {0} has no conversion factor defined for UOM {1}. Add it under the item's UOMs table.").format(
-					frappe.bold(row.item_code), frappe.bold(row.uom)
-				)
-			)
-		return flt(conversion_factor)
+		if frappe.db.has_column("Item", "custom_purchase_unit_price"):
+			item.custom_purchase_unit_price = flt(row.unit_purchase_price)
+		item.insert(ignore_permissions=True)
+		update_product_prices(row.item_code, row.unit_purchase_price, row.selling_unit_price)
 
 	def on_submit(self):
 		if self.purchase_receipt:
@@ -116,7 +115,7 @@ class PurchaseEntry(Document):
 						"item_code": row.item_code,
 						"qty": row.qty,
 						"uom": row.uom,
-						"conversion_factor": row.conversion_factor,
+						"conversion_factor": 1,
 						"rate": row.unit_purchase_price,
 						"warehouse": self.warehouse,
 					}
@@ -135,4 +134,3 @@ class PurchaseEntry(Document):
 		purchase_receipt = frappe.get_doc("Purchase Receipt", self.purchase_receipt)
 		if purchase_receipt.docstatus == 1:
 			purchase_receipt.cancel()
-

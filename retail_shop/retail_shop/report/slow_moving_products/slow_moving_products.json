@@ -15,8 +15,8 @@
  "report_name": "Slow Moving Products",
  "report_type": "Script Report",
  "roles": [
-  { "role": "Retail Administrator" },
-  { "role": "Retail Salesperson" }
+  { "role": "Shop Admin" },
+  { "role": "Salesperson" }
  ]
 }
 

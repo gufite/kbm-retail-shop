@@ -15,8 +15,8 @@
  "report_name": "Sales Report",
  "report_type": "Script Report",
  "roles": [
-  { "role": "Retail Administrator" },
-  { "role": "Retail Salesperson" }
+  { "role": "Shop Admin" },
+  { "role": "Salesperson" }
  ]
 }
 

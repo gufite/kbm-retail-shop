@@ -15,6 +15,6 @@
  "report_name": "Supplier Balance Report",
  "report_type": "Script Report",
  "roles": [
-  { "role": "Retail Administrator" }
+  { "role": "Shop Admin" }
  ]
 }

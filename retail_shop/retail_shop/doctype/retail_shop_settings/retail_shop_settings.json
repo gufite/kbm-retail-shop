@@ -26,10 +26,10 @@
    "options": "Warehouse"
   },
   {
-   "description": "Used when a Purchase Entry's Product Code doesn't match an existing product and a new one is created automatically.",
+   "description": "Used when a new Product Code is entered on Stock In and a product is created automatically.",
    "fieldname": "default_item_group",
    "fieldtype": "Link",
-   "label": "Default Item Group for New Products",
+   "label": "Default Category for New Products",
    "options": "Item Group"
   },
   {
@@ -65,7 +65,7 @@
    "print": 1,
    "read": 1,
    "report": 1,
-   "role": "Retail Administrator",
+   "role": "Shop Admin",
    "share": 1,
    "write": 1
   }

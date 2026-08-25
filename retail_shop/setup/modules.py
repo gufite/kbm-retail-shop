@@ -1,6 +1,10 @@
 import frappe
 
-from retail_shop.setup.defaults import RETAIL_ADMIN_ROLE, RETAIL_SALESPERSON_ROLE
+from retail_shop.setup.defaults import (
+	SHOP_ADMIN_ROLE,
+	SALESPERSON_ROLE,
+	TECHNICAL_ADMIN_ROLE,
+)
 from retail_shop.setup.workspace import WORKSPACE_NAME
 
 ADMIN_MODULE_PROFILE = "Retail Shop Administrator Access"
@@ -24,13 +28,11 @@ SALESPERSON_MODULE_PROFILE = "Retail Shop Salesperson Access"
 # single navigation entry point instead of four overlapping ones.
 #
 # "Core" (Users/Roles), "Setup" (System Settings et al.) and "Automation"
-# (scheduled jobs) are blocked here too, for BOTH retail roles — user
+# (scheduled jobs) are blocked here too, for BOTH shop roles — user
 # activation/deactivation and every other system-level configuration screen
-# is reserved for whoever holds Frappe's own "System Manager" role (the
-# technical admin), which is never assigned this module profile in the first
-# place (see modules.apply_module_profile_to_user's System Manager guard).
-# Neither the Retail Administrator (shop/business admin) nor the Retail
-# Salesperson should see or reach these.
+# is reserved for Technical Admin (paired with Frappe's System Manager),
+# which is never assigned this module profile (see apply_module_profile_to_user).
+# Neither Shop Admin nor Salesperson should see or reach these.
 COMMON_BLOCKED_MODULES = (
 	"Accounts",
 	"Assets",
@@ -112,14 +114,14 @@ def _apply_to_existing_users():
 
 
 def apply_module_profile_to_user(doc, method=None):
-	"""doc_event hook (User: validate) — keep retail_shop role accounts
+	"""doc_event hook (User: validate) — keep shop-role accounts
 	restricted to their appropriate module set, including users created
-	after initial setup. Accounts without a retail_shop role, and any
-	System Manager, are left untouched."""
+	after initial setup. Accounts without a shop role, and any
+	Technical Admin / System Manager, are left untouched."""
 	if doc.name == "Guest":
 		return
 
-	if any(role.role == "System Manager" for role in doc.roles):
+	if any(role.role in {TECHNICAL_ADMIN_ROLE, "System Manager"} for role in doc.roles):
 		return
 
 	profile_name = _resolve_profile_name(doc)
@@ -158,13 +160,13 @@ def ensure_home_page_default(doc, method=None):
 
 def _resolve_profile_name(doc):
 	roles = {role.role for role in doc.roles}
-	if RETAIL_SALESPERSON_ROLE in roles and RETAIL_ADMIN_ROLE not in roles:
+	if SALESPERSON_ROLE in roles and SHOP_ADMIN_ROLE not in roles:
 		return SALESPERSON_MODULE_PROFILE
-	if RETAIL_ADMIN_ROLE in roles:
+	if SHOP_ADMIN_ROLE in roles:
 		return ADMIN_MODULE_PROFILE
 	return None
 
 
 def _has_retail_role(doc):
 	roles = {role.role for role in doc.roles}
-	return RETAIL_ADMIN_ROLE in roles or RETAIL_SALESPERSON_ROLE in roles
+	return SHOP_ADMIN_ROLE in roles or SALESPERSON_ROLE in roles

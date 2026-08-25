@@ -1,0 +1,11 @@
+Item,Product
+Item Code,Product Code
+Item Name,Product Name
+Item Group,Category
+Stock Reconciliation,Stock Count
+Purchase Entry,Stock In
+Default Unit of Measure,Unit
+Standard Selling Rate,Selling Unit Price
+Last Purchase Rate,Purchase Unit Price
+Retail Administrator,Shop Admin
+Retail Salesperson,Salesperson

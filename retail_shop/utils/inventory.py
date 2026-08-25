@@ -1,6 +1,8 @@
 import frappe
 from frappe import _
 
+from frappe.utils import nowdate
+
 from retail_shop.utils.audit import log_audit_event
 
 
@@ -45,7 +47,7 @@ def notify_stock_alerts():
 		return
 
 	recipients = frappe.get_all(
-		"Has Role", filters={"role": "Retail Administrator", "parenttype": "User"}, pluck="parent"
+		"Has Role", filters={"role": "Shop Admin", "parenttype": "User"}, pluck="parent"
 	)
 	if not recipients:
 		return
@@ -68,9 +70,30 @@ def notify_stock_alerts():
 		).insert(ignore_permissions=True)
 
 
+def prepare_stock_count(doc, method=None):
+	"""Fill ERP leftovers so the shop only sees product, counted qty, and reason."""
+	settings_company = frappe.db.get_single_value("Retail Shop Settings", "default_company")
+	settings_warehouse = frappe.db.get_single_value("Retail Shop Settings", "default_warehouse")
+
+	if not doc.company:
+		doc.company = settings_company
+	if not doc.purpose:
+		doc.purpose = "Stock Reconciliation"
+	if not doc.posting_date:
+		doc.posting_date = nowdate()
+	if not doc.naming_series:
+		doc.naming_series = "MAT-RECO-.YYYY.-"
+	if not doc.set_warehouse:
+		doc.set_warehouse = settings_warehouse
+
+	for row in doc.items or []:
+		if not row.warehouse:
+			row.warehouse = doc.set_warehouse or settings_warehouse
+
+
 def require_adjustment_reason(doc, method=None):
 	if not doc.get("custom_adjustment_reason"):
-		frappe.throw(_("A reason is required for every inventory adjustment / stock count."))
+		frappe.throw(_("A reason is required for every stock count / correction."))
 
 
 def log_stock_adjustment(doc, method=None):

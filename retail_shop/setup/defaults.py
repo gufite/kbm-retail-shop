@@ -2,8 +2,21 @@ import frappe
 from frappe import _
 
 
-RETAIL_ADMIN_ROLE = "Retail Administrator"
-RETAIL_SALESPERSON_ROLE = "Retail Salesperson"
+TECHNICAL_ADMIN_ROLE = "Technical Admin"
+SHOP_ADMIN_ROLE = "Shop Admin"
+SALESPERSON_ROLE = "Salesperson"
+
+# Back-compat aliases — older code imported these names.
+RETAIL_ADMIN_ROLE = SHOP_ADMIN_ROLE
+RETAIL_SALESPERSON_ROLE = SALESPERSON_ROLE
+
+_LEGACY_ROLE_NAMES = {
+	"Retail Administrator": SHOP_ADMIN_ROLE,
+	"Retail Salesperson": SALESPERSON_ROLE,
+}
+
+SHOP_DESK_ROLES = (SHOP_ADMIN_ROLE, SALESPERSON_ROLE)
+ALL_APP_ROLES = (TECHNICAL_ADMIN_ROLE, SHOP_ADMIN_ROLE, SALESPERSON_ROLE)
 DEFAULT_MOPS = ("Cash", "Bank Transfer", "Mobile Money", "Credit")
 
 
@@ -39,9 +52,77 @@ def ensure_active_domain():
 
 
 def ensure_roles():
-	for role_name in (RETAIL_ADMIN_ROLE, RETAIL_SALESPERSON_ROLE):
-		if not frappe.db.exists("Role", role_name):
-			frappe.get_doc({"doctype": "Role", "role_name": role_name}).insert(ignore_permissions=True)
+	_rename_legacy_roles()
+	for role_name in ALL_APP_ROLES:
+		_ensure_desk_role(role_name)
+	_grant_technical_admin_to_system_managers()
+
+
+def _rename_legacy_roles():
+	for old_name, new_name in _LEGACY_ROLE_NAMES.items():
+		if not frappe.db.exists("Role", old_name):
+			continue
+		if frappe.db.exists("Role", new_name):
+			continue
+		frappe.rename_doc("Role", old_name, new_name, force=True)
+
+
+def _ensure_desk_role(role_name):
+	if frappe.db.exists("Role", role_name):
+		role = frappe.get_doc("Role", role_name)
+		if not role.desk_access:
+			role.desk_access = 1
+			role.flags.ignore_permissions = True
+			role.save(ignore_permissions=True)
+		return
+	frappe.get_doc({"doctype": "Role", "role_name": role_name, "desk_access": 1}).insert(
+		ignore_permissions=True
+	)
+
+
+def _grant_technical_admin_to_system_managers():
+	"""Keep Technical Admin and System Manager in sync so the shop has one
+	named technical role instead of a hidden Frappe role."""
+	if not frappe.db.exists("Role", TECHNICAL_ADMIN_ROLE) or not frappe.db.exists("Role", "System Manager"):
+		return
+
+	system_managers = frappe.get_all(
+		"Has Role",
+		filters={"role": "System Manager", "parenttype": "User"},
+		pluck="parent",
+	)
+	for user in system_managers:
+		if user in ("Guest",):
+			continue
+		if frappe.db.exists("Has Role", {"parent": user, "parenttype": "User", "role": TECHNICAL_ADMIN_ROLE}):
+			continue
+		frappe.get_doc(
+			{
+				"doctype": "Has Role",
+				"parent": user,
+				"parenttype": "User",
+				"parentfield": "roles",
+				"role": TECHNICAL_ADMIN_ROLE,
+			}
+		).insert(ignore_permissions=True)
+
+
+def sync_technical_admin_role(doc, method=None):
+	"""User:validate — assigning Technical Admin also grants System Manager,
+	and System Manager accounts also get the Technical Admin label."""
+	if doc.name in ("Guest",):
+		return
+
+	roles = {row.role for row in doc.roles}
+	if TECHNICAL_ADMIN_ROLE in roles and "System Manager" not in roles:
+		doc.append("roles", {"role": "System Manager"})
+	elif "System Manager" in roles and TECHNICAL_ADMIN_ROLE not in roles:
+		doc.append("roles", {"role": TECHNICAL_ADMIN_ROLE})
+
+
+def is_technical_admin(roles=None):
+	roles = set(roles if roles is not None else frappe.get_roles())
+	return bool(roles.intersection({TECHNICAL_ADMIN_ROLE, "System Manager", "Administrator"}))
 
 
 def ensure_mode_of_payments():
@@ -190,12 +271,34 @@ def ensure_single_defaults():
 		commission_settings.save()
 
 
+PIECE_UOM = "Piece"
+
+
 def ensure_stock_settings():
+	_ensure_piece_uom()
 	stock_settings = frappe.get_single("Stock Settings")
+	changed = False
 	if stock_settings.valuation_method != "Moving Average":
 		stock_settings.valuation_method = "Moving Average"
+		changed = True
+	if stock_settings.stock_uom != PIECE_UOM:
+		stock_settings.stock_uom = PIECE_UOM
+		changed = True
+	if changed:
 		stock_settings.flags.ignore_permissions = True
 		stock_settings.save()
+
+
+def _ensure_piece_uom():
+	if frappe.db.exists("UOM", PIECE_UOM):
+		return
+	frappe.get_doc(
+		{
+			"doctype": "UOM",
+			"uom_name": PIECE_UOM,
+			"must_be_whole_number": 1,
+		}
+	).insert(ignore_permissions=True)
 
 
 POS_PROFILE_NAME = "Retail Shop POS"

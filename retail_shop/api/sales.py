@@ -17,7 +17,7 @@ _SALE_SUMMARY_DOCTYPES = ("Sales Invoice", "POS Invoice")
 def record_credit_payments(invoice_name: str, payments: str):
 	"""Collect a credit sale's outstanding balance, optionally split across
 	multiple payment methods in one call, e.g. part cash + part mobile money."""
-	frappe.only_for(("Administrator", "Retail Administrator", "Retail Salesperson"))
+	frappe.only_for(("Administrator", "Technical Admin", "Shop Admin", "Salesperson"))
 	rows = frappe.parse_json(payments)
 	if not rows:
 		frappe.throw(_("At least one payment is required."))
@@ -57,7 +57,7 @@ def _create_payment_entry(invoice, mode_of_payment: str, amount: float) -> str:
 
 @frappe.whitelist()
 def get_sale_summary(doctype: str, name: str):
-	frappe.only_for(("Administrator", "Retail Administrator", "Retail Salesperson"))
+	frappe.only_for(("Administrator", "Technical Admin", "Shop Admin", "Salesperson"))
 	if doctype not in _SALE_SUMMARY_DOCTYPES:
 		frappe.throw(_("Not permitted"), frappe.PermissionError)
 

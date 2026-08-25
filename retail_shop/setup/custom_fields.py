@@ -29,10 +29,20 @@ def ensure_custom_fields():
 			"Stock Reconciliation": [
 				{
 					"fieldname": "custom_adjustment_reason",
-					"label": "Adjustment Reason",
+					"label": "Reason",
 					"fieldtype": "Small Text",
-					"insert_after": "purpose",
+					"insert_after": "posting_date",
 					"reqd": 1,
+				}
+			],
+			"Item": [
+				{
+					"fieldname": "custom_purchase_unit_price",
+					"label": "Purchase Unit Price",
+					"fieldtype": "Currency",
+					"insert_after": "standard_rate",
+					"read_only": 1,
+					"in_list_view": 1,
 				}
 			],
 		},

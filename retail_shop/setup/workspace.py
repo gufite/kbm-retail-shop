@@ -3,7 +3,7 @@ from contextlib import contextmanager
 
 import frappe
 
-from retail_shop.setup.defaults import RETAIL_ADMIN_ROLE, RETAIL_SALESPERSON_ROLE
+from retail_shop.setup.defaults import SHOP_ADMIN_ROLE, SALESPERSON_ROLE, TECHNICAL_ADMIN_ROLE
 
 
 # This is the Workspace document's actual name — it drives the page's URL
@@ -48,7 +48,7 @@ def ensure_workspace():
 		content=_get_workspace_content(),
 		shortcuts=[],
 		links=_get_workspace_cards(),
-		roles=("System Manager", RETAIL_ADMIN_ROLE, RETAIL_SALESPERSON_ROLE),
+		roles=("System Manager", TECHNICAL_ADMIN_ROLE, SHOP_ADMIN_ROLE, SALESPERSON_ROLE),
 	)
 	_sync_workspace(
 		name=STAFF_WORKSPACE_NAME,
@@ -57,10 +57,9 @@ def ensure_workspace():
 		content=_get_staff_workspace_content(),
 		shortcuts=[],
 		links=_get_staff_cards(),
-		# User activation/deactivation and every other account-management
-		# task is technical-admin-only: neither retail role gets this, only
-		# whoever holds System Manager (see modules.COMMON_BLOCKED_MODULES).
-		roles=("System Manager",),
+		# Raw User accounts (including Shop Admin and Technical Admin) are
+		# technical-admin-only. Shop Admin manages salespeople through Sales Staff.
+		roles=("System Manager", TECHNICAL_ADMIN_ROLE),
 	)
 	_sync_workspace(
 		name=SETTINGS_WORKSPACE_NAME,
@@ -69,7 +68,7 @@ def ensure_workspace():
 		content=_get_settings_workspace_content(),
 		shortcuts=[],
 		links=_get_settings_cards(),
-		roles=("System Manager", RETAIL_ADMIN_ROLE),
+		roles=("System Manager", TECHNICAL_ADMIN_ROLE, SHOP_ADMIN_ROLE),
 	)
 
 	_hide_redundant_home_workspace()
@@ -188,16 +187,15 @@ def _get_workspace_cards():
 				{"label": "Point of Sale", "link_type": "Page", "link_to": "point-of-sale"},
 				{"label": "Counter Sales", "link_type": "DocType", "link_to": "POS Invoice"},
 				{"label": "Sales Invoice", "link_type": "DocType", "link_to": "Sales Invoice"},
-				{"label": "Purchase Receipt", "link_type": "DocType", "link_to": "Purchase Receipt"},
 				{"label": "Stock Balance", "link_type": "Page", "link_to": "stock-balance"},
 			],
 		},
 		{
 			"label": "Back Office",
 			"links": [
-				{"label": "Purchase Entry", "link_type": "DocType", "link_to": "Purchase Entry"},
+				{"label": "Stock In", "link_type": "DocType", "link_to": "Purchase Entry"},
 				{
-					"label": "Stock Reconciliation",
+					"label": "Stock Count",
 					"link_type": "DocType",
 					"link_to": "Stock Reconciliation",
 				},
@@ -232,11 +230,11 @@ def _get_workspace_cards():
 		{
 			"label": "Catalog & Contacts",
 			"links": [
-				{"label": "Item", "link_type": "DocType", "link_to": "Item"},
+				{"label": "Products", "link_type": "DocType", "link_to": "Item"},
+				{"label": "Categories", "link_type": "DocType", "link_to": "Item Group"},
 				{"label": "Electrician", "link_type": "DocType", "link_to": "Electrician"},
 				{"label": "Customer", "link_type": "DocType", "link_to": "Customer"},
 				{"label": "Supplier", "link_type": "DocType", "link_to": "Supplier"},
-				{"label": "Warehouse", "link_type": "DocType", "link_to": "Warehouse"},
 			],
 		},
 	]
@@ -295,11 +293,10 @@ def _get_settings_cards():
 		{
 			"label": "Staff Management",
 			"links": [
-				# Deliberately not the raw User doctype: this narrow, admin-only
-				# page (retail_shop.api.sales_staff) can only create/enable/
-				# disable/reset-password Salesperson-only accounts — it can't
-				# touch System Manager or other Retail Administrator accounts,
-				# or assign roles at all. See api/sales_staff.py.
+				# Deliberately not the raw User doctype: this narrow Shop Admin
+				# page can only create/enable/disable/reset-password Salesperson
+				# accounts — it can't touch Technical Admin or other Shop Admin
+				# accounts, or assign roles at all. See api/sales_staff.py.
 				{"label": "Sales Staff", "link_type": "Page", "link_to": "sales-staff"},
 			],
 		},

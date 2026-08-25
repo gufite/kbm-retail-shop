@@ -4,7 +4,7 @@ from frappe.utils import now_datetime
 from retail_shop.setup.branding import ensure_branding
 from retail_shop.setup.custom_fields import ensure_custom_fields
 from retail_shop.setup.defaults import ensure_defaults
-from retail_shop.setup.item_form import ensure_item_form_tabs_hidden
+from retail_shop.setup.item_form import ensure_shop_forms
 from retail_shop.setup.list_view import ensure_list_view_settings
 from retail_shop.setup.modules import ensure_module_visibility
 from retail_shop.setup.permissions import ensure_permissions
@@ -19,7 +19,7 @@ def ensure_retail_shop_setup():
 	ensure_workspace()
 	ensure_module_visibility()
 	ensure_list_view_settings()
-	ensure_item_form_tabs_hidden()
+	ensure_shop_forms()
 	ensure_pos_invoice_fields()
 	ensure_branding()
 

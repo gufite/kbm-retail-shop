@@ -11,7 +11,7 @@ from retail_shop.utils.reporting import get_sales_documents
 
 @frappe.whitelist()
 def get_dashboard_data():
-	frappe.only_for(("Administrator", "Retail Administrator", "Retail Salesperson"))
+	frappe.only_for(("Administrator", "Technical Admin", "Shop Admin", "Salesperson"))
 	today = getdate(nowdate())
 	week_start = today - timedelta(days=today.weekday())
 	month_start = today.replace(day=1)

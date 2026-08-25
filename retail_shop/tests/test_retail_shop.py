@@ -45,6 +45,22 @@ class TestRetailShop(FrappeTestCase):
 		self.assertEqual(workspace.module, "Retail Shop")
 		self.assertEqual(workspace.public, 1)
 
+	def test_three_shop_roles_exist(self):
+		from retail_shop.setup.defaults import SHOP_ADMIN_ROLE, SALESPERSON_ROLE, TECHNICAL_ADMIN_ROLE
+
+		for role in (TECHNICAL_ADMIN_ROLE, SHOP_ADMIN_ROLE, SALESPERSON_ROLE):
+			self.assertTrue(frappe.db.exists("Role", role), role)
+		self.assertFalse(frappe.db.exists("Role", "Retail Administrator"))
+		self.assertFalse(frappe.db.exists("Role", "Retail Salesperson"))
+
+	def test_shop_admin_cannot_create_users(self):
+		user = self._make_user("shop-admin-users@test.local", ["Shop Admin"])
+		self.assertFalse(frappe.has_permission("User", "create", user=user.name))
+
+	def test_salesperson_cannot_create_users(self):
+		user = self._make_user("salesperson-users@test.local", ["Salesperson"])
+		self.assertFalse(frappe.has_permission("User", "create", user=user.name))
+
 	def test_purchase_entry_increases_stock(self):
 		item_code = self._make_item()
 		supplier = self._make_supplier()
@@ -90,6 +106,41 @@ class TestRetailShop(FrappeTestCase):
 		self.assertEqual(item.item_name, original_item_name)
 		self.assertAlmostEqual(flt(item.standard_rate), 120.0, places=2)
 		self.assertAlmostEqual(flt(item.last_purchase_rate), 95.0, places=2)
+		self.assertAlmostEqual(flt(item.custom_purchase_unit_price), 95.0, places=2)
+
+	def test_stock_in_fills_company_and_warehouse(self):
+		item_code = self._make_item()
+		supplier = self._make_supplier()
+		entry = frappe.get_doc(
+			{
+				"doctype": "Purchase Entry",
+				"supplier": supplier,
+				"items": [
+					{
+						"item_code": item_code,
+						"qty": 3,
+						"unit_purchase_price": 50,
+						"selling_unit_price": 80,
+					}
+				],
+			}
+		)
+		entry.insert(ignore_permissions=True)
+		entry.submit()
+		self.assertEqual(entry.company, self.company)
+		self.assertEqual(entry.warehouse, self.warehouse)
+		self.assertTrue(entry.purchase_receipt)
+
+	def test_workspace_uses_shop_language_links(self):
+		workspace = frappe.get_doc("Workspace", WORKSPACE_NAME)
+		labels = {row.label for row in workspace.links}
+		self.assertIn("Stock In", labels)
+		self.assertIn("Stock Count", labels)
+		self.assertIn("Products", labels)
+		self.assertIn("Categories", labels)
+		self.assertNotIn("Purchase Receipt", labels)
+		self.assertNotIn("Warehouse", labels)
+		self.assertNotIn("Item", labels)
 
 	def test_percentage_commission_snapshot_and_settings_change(self):
 		item_code = self._make_item()
@@ -174,7 +225,7 @@ class TestRetailShop(FrappeTestCase):
 		doc.submit()
 
 	def test_salesperson_cannot_cancel_sales_invoice(self):
-		user = self._make_user("retail-salesperson-cancel@test.local", ["Retail Salesperson"])
+		user = self._make_user("retail-salesperson-cancel@test.local", ["Salesperson"])
 		self.assertFalse(frappe.has_permission("Sales Invoice", "cancel", user=user.name))
 		self.assertFalse(frappe.has_permission("Sales Invoice", "amend", user=user.name))
 		self.assertTrue(frappe.has_permission("Sales Invoice", "submit", user=user.name))
@@ -290,7 +341,7 @@ class TestRetailShop(FrappeTestCase):
 		self.assertAlmostEqual(return_doc.custom_commission_amount, -6.0, places=2)
 
 	def test_salesperson_cannot_change_commission_settings(self):
-		user = self._make_user("retail-salesperson@test.local", ["Retail Salesperson"])
+		user = self._make_user("retail-salesperson@test.local", ["Salesperson"])
 		settings = frappe.get_single("Retail Commission Settings")
 		with self.set_user(user.name):
 			settings.reload()
@@ -298,7 +349,7 @@ class TestRetailShop(FrappeTestCase):
 			self.assertFalse(frappe.has_permission("Retail Commission Settings", "write", user=user.name))
 
 	def test_salesperson_cannot_create_stock_reconciliation(self):
-		user = self._make_user("retail-inventory@test.local", ["Retail Salesperson"])
+		user = self._make_user("retail-inventory@test.local", ["Salesperson"])
 		self.assertFalse(frappe.has_permission("Stock Reconciliation", "create", user=user.name))
 
 	def _set_commission(self, commission_type, percentage=0, fixed_amount=0):

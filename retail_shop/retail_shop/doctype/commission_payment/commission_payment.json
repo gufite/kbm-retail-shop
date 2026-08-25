@@ -96,7 +96,7 @@
    "print": 1,
    "read": 1,
    "report": 1,
-   "role": "Retail Administrator",
+   "role": "Shop Admin",
    "share": 1,
    "submit": 1,
    "write": 1
@@ -106,7 +106,7 @@
    "print": 1,
    "read": 1,
    "report": 1,
-   "role": "Retail Salesperson"
+   "role": "Salesperson"
   }
  ],
  "sort_field": "modified",

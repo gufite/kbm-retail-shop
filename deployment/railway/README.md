@@ -208,11 +208,11 @@ You will need to upload the backup files into the `sites` volume before restorin
 
 ## Updating The Custom App
 
-This image builds `retail_shop` from:
+The image clones `retail_shop` from GitHub during Docker build. The
+`bench init` layer is cached (apps.json rarely changes), so a later layer
+re-installs `retail_shop` on every commit using `RAILWAY_GIT_COMMIT_SHA`
+and the current GitHub `main` tip.
 
-```text
-https://github.com/gufite/kbm-retail-shop.git
-```
+Push to `main` and wait for the `app` service rebuild to finish, then hard
+refresh the site. Startup still runs `bench migrate` when `AUTO_MIGRATE=1`.
 
-When you push updates to that repo, trigger a new Railway deployment for the
-`app` service so the image rebuilds and then runs startup migrations.

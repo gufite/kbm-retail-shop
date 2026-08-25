@@ -24,6 +24,18 @@ RUN bench init \
 	echo "{}" > sites/common_site_config.json && \
 	find apps -mindepth 1 -path "*/.git" -prune -exec rm -rf {} +
 
+# apps.json does not change on every push, so the bench-init layer above is
+# cached with a stale retail_shop clone. Re-install this app on every commit
+# so kbmlight.com actually receives the code that was just pushed.
+ARG RAILWAY_GIT_COMMIT_SHA=unknown
+ADD https://api.github.com/repos/gufite/kbm-retail-shop/commits/main /tmp/kbm-retail-shop-head.json
+RUN echo "Installing retail_shop ${RAILWAY_GIT_COMMIT_SHA}" \
+	&& cd /home/frappe/frappe-bench \
+	&& rm -rf apps/retail_shop \
+	&& bench get-app --branch main https://github.com/gufite/kbm-retail-shop.git \
+	&& bench build --app retail_shop \
+	&& find apps/retail_shop -path "*/.git" -prune -exec rm -rf {} +
+
 FROM ${FRAPPE_IMAGE_PREFIX}/base:${FRAPPE_BRANCH} AS backend
 
 USER frappe

@@ -71,6 +71,9 @@ class TestRetailShop(FrappeTestCase):
 
 		names = {page.get("name") for page in get_workspace_sidebar_items().get("pages", [])}
 		self.assertEqual(names, {WORKSPACE_NAME, STAFF_WORKSPACE_NAME, SETTINGS_WORKSPACE_NAME})
+		self.assertFalse(get_workspace_sidebar_items().get("has_access"))
+		self.assertNotIn("Accounting", names)
+		self.assertNotIn("Users", names)
 
 	def test_shop_users_page_is_on_staff_workspace(self):
 		from retail_shop.setup.workspace import STAFF_WORKSPACE_NAME
@@ -96,6 +99,16 @@ class TestRetailShop(FrappeTestCase):
 		self.assertTrue(user.email.endswith("@kbmlight.local"))
 		self.assertIn(SALESPERSON_ROLE, [row.role for row in user.roles])
 		self.assertEqual(user.send_welcome_email, 0)
+
+		named = create_shop_user(
+			f"named{uuid4().hex[:6]}",
+			"secret12",
+			SALESPERSON_ROLE,
+			email=f"named-{uuid4().hex[:6]}@example.com",
+		)
+		named_user = frappe.get_doc("User", named["name"])
+		self.assertEqual(named_user.send_welcome_email, 0)
+		self.assertFalse(named_user.email.endswith("@kbmlight.local"))
 
 		data = list_shop_users()
 		self.assertEqual(data["roles"], [TECHNICAL_ADMIN_ROLE, SHOP_ADMIN_ROLE, SALESPERSON_ROLE])

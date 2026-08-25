@@ -2,7 +2,7 @@ import re
 
 import frappe
 from frappe import _
-from frappe.utils import cint
+from frappe.utils import cint, validate_email_address
 
 from retail_shop.setup.defaults import (
 	SALESPERSON_ROLE,
@@ -72,7 +72,7 @@ def list_shop_users():
 	users = frappe.get_all(
 		"User",
 		filters={"name": ["not in", ["Guest"]]},
-		fields=["name", "full_name", "username", "enabled", "last_login"],
+		fields=["name", "full_name", "username", "email", "enabled", "last_login"],
 		order_by="username asc, full_name asc",
 	)
 	rows = []
@@ -80,11 +80,14 @@ def list_shop_users():
 		role = _shop_role_of(user.name)
 		if role not in allowed:
 			continue
+		email = user.email or user.name
+		generated_email = email.lower().endswith(f"@{EMAIL_DOMAIN}")
 		rows.append(
 			{
 				"name": user.name,
 				"username": user.username or user.name,
 				"full_name": user.full_name,
+				"email": None if generated_email else email,
 				"role": role,
 				"enabled": user.enabled,
 				"last_login": user.last_login,
@@ -95,13 +98,20 @@ def list_shop_users():
 
 
 @frappe.whitelist()
-def create_shop_user(username: str, password: str, role: str, full_name: str | None = None):
+def create_shop_user(
+	username: str,
+	password: str,
+	role: str,
+	full_name: str | None = None,
+	email: str | None = None,
+):
 	_ensure_can_manage_users()
 
 	username = (username or "").strip().lower()
 	password = password or ""
 	role = (role or "").strip()
 	full_name = (full_name or "").strip() or username
+	email = (email or "").strip().lower()
 
 	if not username or not _USERNAME_RE.match(username):
 		frappe.throw(_("Username can only contain letters, numbers, dot, dash, and underscore."))
@@ -112,7 +122,11 @@ def create_shop_user(username: str, password: str, role: str, full_name: str | N
 	if role not in _allowed_roles_for_caller():
 		frappe.throw(_("You cannot assign the {0} role.").format(role), frappe.PermissionError)
 
-	email = _email_for_username(username)
+	if email:
+		validate_email_address(email, throw=True)
+	else:
+		email = _email_for_username(username)
+
 	if frappe.db.exists("User", email) or frappe.db.exists("User", {"username": username}):
 		frappe.throw(_("That username is already used."))
 
@@ -129,6 +143,7 @@ def create_shop_user(username: str, password: str, role: str, full_name: str | N
 		}
 	)
 	doc.flags.ignore_password_policy = True
+	doc.flags.no_welcome_mail = True
 	doc.insert(ignore_permissions=True)
 	return {"name": doc.name, "username": username, "role": role}
 

@@ -26,4 +26,8 @@ def get_workspace_sidebar_items():
 		for page in data.get("pages", [])
 		if page.get("public") and page.get("name") in visible_workspaces
 	]
+	# Administrator has every role, including Workspace Manager. That flag
+	# makes the desk show hidden ERPNext workspaces again; keep it off.
+	data["has_access"] = 0
+	data["has_create_access"] = 0
 	return data

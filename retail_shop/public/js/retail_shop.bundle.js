@@ -695,55 +695,100 @@ retail_shop.decorate_native_workspace_cards = function (is_retail_home) {
 };
 
 retail_shop.patch_boot_workspaces = function () {
-	if (
-		retail_shop.boot_workspaces_patched ||
-		!retail_shop.should_filter_home_workspace()
-	) {
+	if (retail_shop.boot_workspaces_patched) {
 		return;
 	}
 
-	if (!Array.isArray(frappe.boot?.allowed_workspaces)) {
+	if (!Array.isArray(frappe.boot?.allowed_workspaces) || !frappe.boot?.user?.roles) {
 		setTimeout(retail_shop.patch_boot_workspaces, 50);
 		return;
 	}
 
-	frappe.boot.allowed_workspaces = retail_shop.filter_boot_workspaces(
-		frappe.boot.allowed_workspaces
-	);
+	if (retail_shop.should_filter_home_workspace()) {
+		frappe.boot.allowed_workspaces = retail_shop.filter_boot_workspaces(
+			frappe.boot.allowed_workspaces
+		);
+	}
 	retail_shop.boot_workspaces_patched = true;
 };
 
+retail_shop.restrict_workspace_payload = function (data) {
+	if (!data || !retail_shop.should_filter_home_workspace()) {
+		return data;
+	}
+	if (data.pages) {
+		data.pages = retail_shop.filter_workspace_pages(data.pages);
+	}
+	data.has_access = 0;
+	data.has_create_access = 0;
+	return data;
+};
+
+retail_shop.patch_sidebar_xcall = function () {
+	if (retail_shop.sidebar_xcall_patched) {
+		return;
+	}
+	if (typeof frappe?.xcall !== "function") {
+		setTimeout(retail_shop.patch_sidebar_xcall, 20);
+		return;
+	}
+
+	const original_xcall = frappe.xcall;
+	frappe.xcall = function (method, params) {
+		const result = original_xcall.apply(this, arguments);
+		if (method !== "frappe.desk.desktop.get_workspace_sidebar_items") {
+			return result;
+		}
+		return Promise.resolve(result).then((data) => retail_shop.restrict_workspace_payload(data));
+	};
+	retail_shop.sidebar_xcall_patched = true;
+};
+
+retail_shop.hide_extra_sidebar_items = function () {
+	if (!retail_shop.should_filter_home_workspace()) {
+		return;
+	}
+
+	const allowed = new Set(
+		retail_shop.get_visible_workspaces().map((name) => (name || "").trim().toLowerCase())
+	);
+	document.querySelectorAll(".desk-sidebar .sidebar-item-container").forEach((el) => {
+		const name = (el.getAttribute("item-name") || "").trim().toLowerCase();
+		if (name && !allowed.has(name)) {
+			el.style.setProperty("display", "none", "important");
+		}
+	});
+};
+
 retail_shop.patch_workspace_sidebar = function () {
-	if (
-		retail_shop.workspace_sidebar_patched ||
-		!retail_shop.should_filter_home_workspace() ||
-		!frappe.views?.Workspace
-	) {
+	if (retail_shop.workspace_sidebar_patched) {
+		return;
+	}
+
+	if (!frappe.views?.Workspace) {
+		setTimeout(retail_shop.patch_workspace_sidebar, 30);
 		return;
 	}
 
 	const original_get_pages = frappe.views.Workspace.prototype.get_pages;
 
 	frappe.views.Workspace.prototype.get_pages = function () {
-		return Promise.resolve(original_get_pages.call(this)).then((data) => {
-			if (data?.pages) {
-				data.pages = retail_shop.filter_workspace_pages(data.pages);
-			}
-			return data;
-		});
+		return Promise.resolve(original_get_pages.call(this)).then((data) =>
+			retail_shop.restrict_workspace_payload(data)
+		);
 	};
 
 	retail_shop.clear_stale_workspace_state();
-
 	retail_shop.workspace_sidebar_patched = true;
 };
 
 retail_shop.patch_workspace_show_page = function () {
-	if (
-		retail_shop.workspace_show_page_patched ||
-		!retail_shop.should_filter_home_workspace() ||
-		!frappe.views?.Workspace
-	) {
+	if (retail_shop.workspace_show_page_patched) {
+		return;
+	}
+
+	if (!frappe.views?.Workspace) {
+		setTimeout(retail_shop.patch_workspace_show_page, 30);
 		return;
 	}
 
@@ -772,6 +817,7 @@ retail_shop.decorate_retail_workspace = function () {
 	retail_shop.workspace_widget_observer?.disconnect();
 
 	try {
+		retail_shop.hide_extra_sidebar_items();
 		const is_retail_home =
 			document.body.classList.contains("retail-shop-home-active") ||
 			retail_shop.is_retail_workspace_surface();
@@ -908,12 +954,17 @@ retail_shop.init_workspace_customizations = function () {
 	retail_shop.ensure_workspace_styles();
 	retail_shop.clear_stale_workspace_state();
 	retail_shop.patch_home_route();
+	retail_shop.patch_sidebar_xcall();
 	retail_shop.patch_boot_workspaces();
 	retail_shop.patch_workspace_sidebar();
 	retail_shop.patch_workspace_show_page();
 	retail_shop.observe_workspace_widgets();
+	retail_shop.hide_extra_sidebar_items();
 	retail_shop.sync_workspace_page_state();
-	frappe.after_ajax?.(() => retail_shop.sync_workspace_page_state());
+	frappe.after_ajax?.(() => {
+		retail_shop.hide_extra_sidebar_items();
+		retail_shop.sync_workspace_page_state();
+	});
 };
 
 retail_shop.patch_logout_redirect = function () {
@@ -938,6 +989,9 @@ if (localStorage.getItem("current_page") === "ERPNext Settings") {
 	localStorage.removeItem("current_page");
 	localStorage.removeItem("is_current_page_public");
 }
+
+retail_shop.patch_sidebar_xcall();
+retail_shop.patch_workspace_sidebar();
 
 // The navbar is rendered once during desk boot, before any route/ready
 // event we could otherwise hook into — a MutationObserver catches it

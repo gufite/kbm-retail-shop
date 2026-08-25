@@ -17,6 +17,7 @@ WORKSPACE_NAME = "KBM Lighting Trading"
 WORKSPACE_MODULE = "Retail Shop"
 STAFF_WORKSPACE_NAME = "Staff"
 SETTINGS_WORKSPACE_NAME = "Store Settings"
+SHOP_WORKSPACE_NAMES = (WORKSPACE_NAME, STAFF_WORKSPACE_NAME, SETTINGS_WORKSPACE_NAME)
 
 # Names this workspace document has previously been renamed from — kept so
 # ensure_workspace() self-heals a site that hasn't picked up a rename yet,
@@ -72,6 +73,7 @@ def ensure_workspace():
 	)
 
 	_hide_redundant_home_workspace()
+	_hide_non_shop_workspaces()
 
 
 def _sync_workspace(name, icon, sequence_id, content, shortcuts, links, roles):
@@ -152,6 +154,19 @@ def _hide_redundant_home_workspace():
 	home_workspace.flags.ignore_permissions = True
 	with _public_workspace_write():
 		home_workspace.save(ignore_permissions=True)
+
+
+def _hide_non_shop_workspaces():
+	"""Hide native ERPNext/Frappe workspaces so the shop desk only keeps
+	KBM Lighting Trading, Staff, and Store Settings. Administrator still
+	has Workspace Manager, which would otherwise keep showing hidden
+	pages — the sidebar API turns that flag off as well."""
+	for name in frappe.get_all("Workspace", filters={"public": 1}, pluck="name"):
+		if name in SHOP_WORKSPACE_NAMES:
+			continue
+		if frappe.db.get_value("Workspace", name, "is_hidden"):
+			continue
+		frappe.db.set_value("Workspace", name, "is_hidden", 1, update_modified=False)
 
 
 def _get_workspace_content():

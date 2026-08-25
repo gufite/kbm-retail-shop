@@ -41,6 +41,7 @@ class ShopUsersPage {
 					<tr>
 						<th>${__("Username")}</th>
 						<th>${__("Role")}</th>
+						<th>${__("Email")}</th>
 						<th>${__("Status")}</th>
 						<th>${__("Last Login")}</th>
 						<th></th>
@@ -55,6 +56,7 @@ class ShopUsersPage {
 			const $tr = $("<tr></tr>").appendTo($tbody);
 			$tr.append(`<td>${frappe.utils.escape_html(row.username || row.name)}</td>`);
 			$tr.append(`<td>${frappe.utils.escape_html(row.role || "")}</td>`);
+			$tr.append(`<td>${frappe.utils.escape_html(row.email || "—")}</td>`);
 			$tr.append(
 				`<td><span class="indicator ${row.enabled ? "green" : "red"}">${
 					row.enabled ? __("Active") : __("Disabled")
@@ -90,6 +92,13 @@ class ShopUsersPage {
 					reqd: 1,
 					default: this.roles[0],
 				},
+				{
+					fieldname: "email",
+					label: __("Email"),
+					fieldtype: "Data",
+					options: "Email",
+					description: __("Optional. Leave empty if they have no email."),
+				},
 				{ fieldname: "password", label: __("Password"), fieldtype: "Password", reqd: 1 },
 				{
 					fieldname: "confirm_password",
@@ -110,14 +119,17 @@ class ShopUsersPage {
 						username: values.username,
 						password: values.password,
 						role: values.role,
+						email: values.email || "",
 					},
 					freeze: true,
 					callback: () => {
 						dialog.hide();
-						frappe.show_alert({
-							message: __("User created."),
-							indicator: "green",
-						});
+						frappe.msgprint(
+							__(
+								"Account created. Tell {0} the username and password yourself. No email was sent.",
+								[frappe.utils.escape_html(values.username)]
+							)
+						);
 						this.refresh();
 					},
 				});

@@ -9,6 +9,7 @@ from retail_shop.setup.list_view import ensure_list_view_settings
 from retail_shop.setup.modules import ensure_module_visibility
 from retail_shop.setup.permissions import ensure_permissions
 from retail_shop.setup.pos_fields import ensure_pos_invoice_fields
+from retail_shop.setup.pricing import ensure_sales_pricing_forms
 from retail_shop.setup.workspace import ensure_workspace
 
 
@@ -20,6 +21,7 @@ def ensure_retail_shop_setup():
 	ensure_module_visibility()
 	ensure_list_view_settings()
 	ensure_shop_forms()
+	ensure_sales_pricing_forms()
 	ensure_pos_invoice_fields()
 	ensure_branding()
 

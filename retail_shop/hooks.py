@@ -38,11 +38,13 @@ doctype_list_js = {
 
 doc_events = {
 	"POS Invoice": {
+		"before_validate": "retail_shop.utils.sales.prepare_sales_doc",
 		"validate": "retail_shop.utils.sales.validate_sales_doc",
 		"before_submit": "retail_shop.utils.sales.before_submit_sales_doc",
 		"on_cancel": "retail_shop.utils.sales.on_cancel_sales_doc",
 	},
 	"Sales Invoice": {
+		"before_validate": "retail_shop.utils.sales.prepare_sales_doc",
 		"validate": "retail_shop.utils.sales.validate_sales_doc",
 		"before_submit": "retail_shop.utils.sales.before_submit_sales_doc",
 		"on_cancel": "retail_shop.utils.sales.on_cancel_sales_doc",

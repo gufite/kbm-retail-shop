@@ -1,3 +1,4 @@
+import frappe
 from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 
 
@@ -37,17 +38,43 @@ def ensure_custom_fields():
 			],
 			"Item": [
 				{
+					"fieldname": "custom_minimum_selling_price",
+					"label": "Minimum Selling Price",
+					"fieldtype": "Currency",
+					"insert_after": "standard_rate",
+					"reqd": 1,
+					"non_negative": 1,
+					"in_list_view": 1,
+					"description": "The final selling price, after the transaction discount, cannot be lower than this amount.",
+				},
+				{
 					"fieldname": "custom_purchase_unit_price",
 					"label": "Purchase Unit Price",
 					"fieldtype": "Currency",
-					"insert_after": "standard_rate",
+					"insert_after": "custom_minimum_selling_price",
 					"read_only": 1,
 					"in_list_view": 1,
-				}
+				},
 			],
 		},
 		ignore_validate=True,
 		update=True,
+	)
+	_backfill_minimum_selling_prices()
+
+
+def _backfill_minimum_selling_prices():
+	"""Protect products created before the minimum-price field existed."""
+	if not frappe.db.has_column("Item", "custom_minimum_selling_price"):
+		return
+
+	frappe.db.sql(
+		"""
+		update `tabItem`
+		set custom_minimum_selling_price = standard_rate
+		where coalesce(custom_minimum_selling_price, 0) <= 0
+			and coalesce(standard_rate, 0) > 0
+		"""
 	)
 
 

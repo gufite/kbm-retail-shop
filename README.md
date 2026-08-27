@@ -2,6 +2,8 @@
 
 Custom Frappe/ERPNext v15 app for a single-shop sales and inventory workflow.
 
+See the [KBM Lighting Trading User Manual](USER_MANUAL.md) for role responsibilities and step-by-step operating procedures.
+
 ## Architecture
 
 - Standard ERPNext documents remain the source of truth for stock and accounting.

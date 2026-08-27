@@ -2,16 +2,19 @@ import frappe
 from frappe.utils import flt
 
 
-def update_product_prices(item_code, purchase_rate, selling_rate):
+def update_product_prices(item_code, purchase_rate, selling_rate, minimum_selling_price):
 	"""Keep the product card's latest buy/sell prices in shop language fields."""
 	purchase_rate = flt(purchase_rate)
 	selling_rate = flt(selling_rate)
+	minimum_selling_price = flt(minimum_selling_price)
 	values = {
 		"last_purchase_rate": purchase_rate,
 		"standard_rate": selling_rate,
 	}
 	if frappe.db.has_column("Item", "custom_purchase_unit_price"):
 		values["custom_purchase_unit_price"] = purchase_rate
+	if frappe.db.has_column("Item", "custom_minimum_selling_price"):
+		values["custom_minimum_selling_price"] = minimum_selling_price
 	frappe.db.set_value("Item", item_code, values, update_modified=False)
 	_sync_selling_item_price(item_code, selling_rate)
 

@@ -1,6 +1,5 @@
 import frappe
 
-
 # POS Settings.invoice_fields is ERPNext's own extension point for the POS
 # screen's "Additional Information" panel (erpnext/.../pos_payment.js) — it
 # renders whatever fields are listed here against the in-progress POS
@@ -9,6 +8,11 @@ import frappe
 # but have no way to be seen or set from the actual POS screen a salesperson
 # uses (SRS Sec. 3.1: electrician is optional per sale).
 POS_INVOICE_FIELDS = (
+	{
+		"fieldname": "discount_amount",
+		"label": "Transaction Discount",
+		"fieldtype": "Currency",
+	},
 	{
 		"fieldname": "custom_electrician",
 		"label": "Electrician",
@@ -26,10 +30,15 @@ POS_INVOICE_FIELDS = (
 
 def ensure_pos_invoice_fields():
 	settings = frappe.get_single("POS Settings")
-	existing = {row.fieldname for row in settings.invoice_fields}
+	existing = {row.fieldname: row for row in settings.invoice_fields}
 	changed = False
 	for field in POS_INVOICE_FIELDS:
 		if field["fieldname"] in existing:
+			row = existing[field["fieldname"]]
+			for key, value in field.items():
+				if row.get(key) != value:
+					row.set(key, value)
+					changed = True
 			continue
 		settings.append("invoice_fields", field)
 		changed = True

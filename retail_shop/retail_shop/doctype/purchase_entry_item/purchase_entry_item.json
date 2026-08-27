@@ -10,6 +10,7 @@
   "unit_purchase_price",
   "qty",
   "selling_unit_price",
+  "minimum_selling_price",
   "uom",
   "conversion_factor",
   "amount",
@@ -54,6 +55,15 @@
    "reqd": 1
   },
   {
+   "description": "The final selling price after any transaction discount cannot be lower than this amount.",
+   "fieldname": "minimum_selling_price",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Minimum Selling Price",
+   "non_negative": 1,
+   "reqd": 1
+  },
+  {
    "fieldname": "uom",
    "fieldtype": "Link",
    "hidden": 1,
@@ -92,4 +102,3 @@
  "sort_order": "DESC",
  "states": []
 }
-

@@ -4,8 +4,27 @@ from frappe.utils import cint, flt
 
 from retail_shop.utils.audit import log_audit_event
 
-
 RETAIL_SALES_DOCTYPES = {"POS Invoice", "Sales Invoice"}
+
+
+def prepare_sales_doc(doc, method=None):
+	"""Keep retail checkout on one fixed discount applied to the transaction."""
+	if not _is_managed_sales_doc(doc) or doc.is_return:
+		return
+
+	if flt(doc.additional_discount_percentage):
+		frappe.throw(
+			_("Percentage discounts are not allowed. Enter a fixed Transaction Discount amount instead.")
+		)
+	if flt(doc.discount_amount) < 0:
+		frappe.throw(_("Transaction Discount cannot be negative."))
+
+	doc.apply_discount_on = "Net Total"
+	# A manually edited rate is the selling price. Clear line-level discount
+	# inputs so the only separate discount on the sale is the transaction total.
+	for row in doc.get("items") or []:
+		row.discount_percentage = 0
+		row.discount_amount = 0
 
 
 def validate_sales_doc(doc, method=None):
@@ -18,6 +37,7 @@ def validate_sales_doc(doc, method=None):
 
 	_validate_electrician(doc, settings)
 	_validate_customer_for_credit_sale(doc, settings)
+	_validate_minimum_selling_prices(doc)
 
 
 def before_submit_sales_doc(doc, method=None):
@@ -41,9 +61,9 @@ def on_cancel_sales_doc(doc, method=None):
 		event_type="Sale Cancelled",
 		reference_doctype=doc.doctype,
 		reference_name=doc.name,
-		details=_("Sale for electrician {0} cancelled; commission of {1} no longer counts toward any report or dashboard total.").format(
-			doc.custom_electrician, doc.custom_commission_amount
-		),
+		details=_(
+			"Sale for electrician {0} cancelled; commission of {1} no longer counts toward any report or dashboard total."
+		).format(doc.custom_electrician, doc.custom_commission_amount),
 	)
 
 
@@ -80,7 +100,11 @@ def _resolve_commission_rate(electrician: str):
 
 	settings = frappe.get_cached_doc("Retail Commission Settings")
 	commission_type = settings.commission_type or "Percentage"
-	rate = flt(settings.commission_percentage if commission_type == "Percentage" else settings.fixed_commission_amount)
+	rate = flt(
+		settings.commission_percentage
+		if commission_type == "Percentage"
+		else settings.fixed_commission_amount
+	)
 	return commission_type, rate
 
 
@@ -90,7 +114,9 @@ def apply_return_commission_snapshot(doc):
 
 	original = frappe.get_doc(doc.doctype, doc.return_against)
 	precision = _get_currency_precision(doc)
-	original_basis = abs(flt(original.custom_commission_basis_amount or _get_commission_basis_amount(original)))
+	original_basis = abs(
+		flt(original.custom_commission_basis_amount or _get_commission_basis_amount(original))
+	)
 	current_basis = abs(flt(_get_commission_basis_amount(doc)))
 	# Clamped to 1: a return basis larger than the original sale's (e.g. a
 	# return row edited to a bigger qty/amount than what was actually sold)
@@ -163,6 +189,57 @@ def _validate_customer_for_credit_sale(doc, settings):
 		frappe.throw(_("A credit sale must have a real customer selected, not the walk-in customer."))
 
 
+def _validate_minimum_selling_prices(doc):
+	if doc.is_return:
+		return
+
+	item_codes = {row.item_code for row in doc.get("items") or [] if row.item_code and flt(row.qty) > 0}
+	minimum_prices = {
+		row.name: flt(row.custom_minimum_selling_price)
+		for row in frappe.get_all(
+			"Item",
+			filters={"name": ["in", list(item_codes)]},
+			fields=["name", "custom_minimum_selling_price"],
+		)
+	}
+
+	for row in doc.get("items") or []:
+		if not row.item_code or flt(row.qty) <= 0:
+			continue
+		minimum_price = minimum_prices.get(row.item_code, 0)
+		if minimum_price <= 0:
+			frappe.throw(
+				_("Row #{0}: Product {1} needs a Minimum Selling Price before it can be sold.").format(
+					row.idx, frappe.bold(row.item_code)
+				)
+			)
+
+		conversion_factor = flt(row.conversion_factor) or 1
+		minimum_base_rate = minimum_price * conversion_factor
+		final_base_rate = flt(row.base_net_rate)
+		tolerance = 1 / (10 ** (row.precision("base_net_rate") or 2))
+		if final_base_rate + tolerance < minimum_base_rate:
+			frappe.throw(
+				_(
+					"Row #{0}: Final selling price for {1} is {2}, below the Minimum Selling Price of {3}. "
+					"Reduce the transaction discount or increase the selling price."
+				).format(
+					row.idx,
+					frappe.bold(row.item_code),
+					frappe.format_value(
+						final_base_rate,
+						{"fieldtype": "Currency", "options": "Company:company:default_currency"},
+						doc,
+					),
+					frappe.format_value(
+						minimum_base_rate,
+						{"fieldtype": "Currency", "options": "Company:company:default_currency"},
+						doc,
+					),
+				)
+			)
+
+
 def _get_currency_precision(doc) -> int:
 	return doc.precision("grand_total") or 2
 
@@ -171,4 +248,3 @@ def _get_commission_basis_amount(doc) -> float:
 	# Commission is based on the final, discounted sale amount excluding tax —
 	# net_total alone misses order-level discounts applied on Grand Total.
 	return flt(doc.grand_total) - flt(doc.total_taxes_and_charges or 0)
-

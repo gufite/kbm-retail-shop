@@ -1,7 +1,6 @@
 import frappe
 from frappe import _
 
-
 TECHNICAL_ADMIN_ROLE = "Technical Admin"
 SHOP_ADMIN_ROLE = "Shop Admin"
 SALESPERSON_ROLE = "Salesperson"
@@ -316,10 +315,23 @@ def ensure_pos_profile():
 		# customer before any item can be added — without it, the screen
 		# blocks item entry on every sale, credit or not. Self-heal existing
 		# profiles left over from before this field was set on creation.
-		if settings.default_walk_in_customer and not frappe.db.get_value(
-			"POS Profile", POS_PROFILE_NAME, "customer"
-		):
-			frappe.db.set_value("POS Profile", POS_PROFILE_NAME, "customer", settings.default_walk_in_customer)
+		profile = frappe.get_doc("POS Profile", POS_PROFILE_NAME)
+		changed = False
+		if settings.default_walk_in_customer and not profile.customer:
+			profile.customer = settings.default_walk_in_customer
+			changed = True
+		for fieldname, value in {
+			"allow_rate_change": 1,
+			"allow_discount_change": 0,
+			"apply_discount_on": "Net Total",
+			"ignore_pricing_rule": 1,
+		}.items():
+			if profile.get(fieldname) != value:
+				profile.set(fieldname, value)
+				changed = True
+		if changed:
+			profile.flags.ignore_permissions = True
+			profile.save()
 		return
 
 	company = settings.default_company
@@ -343,6 +355,10 @@ def ensure_pos_profile():
 			"write_off_account": write_off_account,
 			"write_off_cost_center": cost_center,
 			"write_off_limit": 0,
+			"allow_rate_change": 1,
+			"allow_discount_change": 0,
+			"apply_discount_on": "Net Total",
+			"ignore_pricing_rule": 1,
 			"payments": [
 				{"mode_of_payment": mode, "default": 1 if mode == "Cash" else 0}
 				for mode in DEFAULT_MOPS
@@ -358,4 +374,3 @@ def get_default_company():
 	if not company:
 		frappe.throw(_("Retail Shop Settings requires a default company."))
 	return company
-

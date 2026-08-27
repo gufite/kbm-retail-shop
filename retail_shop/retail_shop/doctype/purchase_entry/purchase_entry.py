@@ -10,7 +10,9 @@ from retail_shop.utils.products import default_stock_uom, update_product_prices
 class PurchaseEntry(Document):
 	def validate(self):
 		if not self.company:
-			self.company = frappe.db.get_single_value("Retail Shop Settings", "default_company") or get_default_company()
+			self.company = (
+				frappe.db.get_single_value("Retail Shop Settings", "default_company") or get_default_company()
+			)
 		if not self.warehouse:
 			self.warehouse = frappe.db.get_single_value("Retail Shop Settings", "default_warehouse")
 		if not self.warehouse:
@@ -49,7 +51,12 @@ class PurchaseEntry(Document):
 	def _ensure_product(self, row):
 		"""Product Code upsert: an existing code restocks/reprices the same
 		product; a new code creates one. See SRS Sec. 5 / Stock Input spec."""
-		existing = frappe.db.get_value("Item", row.item_code, ["item_name", "stock_uom"], as_dict=True)
+		existing = frappe.db.get_value(
+			"Item",
+			row.item_code,
+			["item_name", "stock_uom", "custom_minimum_selling_price"],
+			as_dict=True,
+		)
 
 		if existing:
 			# Duplicate product: keep the existing code & description as-is,
@@ -66,7 +73,15 @@ class PurchaseEntry(Document):
 				)
 			row.item_name = existing.item_name
 			row.uom = existing.stock_uom
-			update_product_prices(row.item_code, row.unit_purchase_price, row.selling_unit_price)
+			if row.minimum_selling_price in (None, ""):
+				row.minimum_selling_price = existing.custom_minimum_selling_price or row.selling_unit_price
+			self._validate_product_prices(row)
+			update_product_prices(
+				row.item_code,
+				row.unit_purchase_price,
+				row.selling_unit_price,
+				row.minimum_selling_price,
+			)
 			return
 
 		if not row.item_name:
@@ -75,6 +90,7 @@ class PurchaseEntry(Document):
 					row.idx, frappe.bold(row.item_code)
 				)
 			)
+		self._validate_product_prices(row)
 
 		item_group = frappe.db.get_single_value("Retail Shop Settings", "default_item_group")
 		if not item_group:
@@ -95,8 +111,25 @@ class PurchaseEntry(Document):
 		)
 		if frappe.db.has_column("Item", "custom_purchase_unit_price"):
 			item.custom_purchase_unit_price = flt(row.unit_purchase_price)
+		if frappe.db.has_column("Item", "custom_minimum_selling_price"):
+			item.custom_minimum_selling_price = flt(row.minimum_selling_price)
 		item.insert(ignore_permissions=True)
-		update_product_prices(row.item_code, row.unit_purchase_price, row.selling_unit_price)
+		update_product_prices(
+			row.item_code,
+			row.unit_purchase_price,
+			row.selling_unit_price,
+			row.minimum_selling_price,
+		)
+
+	def _validate_product_prices(self, row):
+		minimum_price = flt(row.minimum_selling_price)
+		selling_price = flt(row.selling_unit_price)
+		if minimum_price <= 0:
+			frappe.throw(_("Row #{0}: Minimum Selling Price must be greater than zero.").format(row.idx))
+		if selling_price < minimum_price:
+			frappe.throw(
+				_("Row #{0}: Selling Unit Price cannot be lower than Minimum Selling Price.").format(row.idx)
+			)
 
 	def on_submit(self):
 		if self.purchase_receipt:

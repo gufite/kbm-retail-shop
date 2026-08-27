@@ -5,7 +5,14 @@ frappe.ui.form.on("Purchase Entry Item", {
 			return;
 		}
 
-		frappe.db.get_value("Item", row.item_code, ["item_name", "standard_rate", "custom_purchase_unit_price"]).then((r) => {
+		frappe.db
+			.get_value("Item", row.item_code, [
+				"item_name",
+				"standard_rate",
+				"custom_purchase_unit_price",
+				"custom_minimum_selling_price",
+			])
+			.then((r) => {
 			const product = r && r.message;
 			if (!product || !product.item_name) {
 				return;
@@ -17,6 +24,14 @@ frappe.ui.form.on("Purchase Entry Item", {
 			}
 			if (!row.unit_purchase_price && product.custom_purchase_unit_price) {
 				frappe.model.set_value(cdt, cdn, "unit_purchase_price", product.custom_purchase_unit_price);
+			}
+			if (!row.minimum_selling_price) {
+				frappe.model.set_value(
+					cdt,
+					cdn,
+					"minimum_selling_price",
+					product.custom_minimum_selling_price || product.standard_rate
+				);
 			}
 			frappe.show_alert({
 				message: __(

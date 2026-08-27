@@ -1,11 +1,10 @@
 from uuid import uuid4
 
 import frappe
-from frappe.tests.utils import FrappeTestCase
-from frappe.utils import flt, nowdate
-
 from erpnext.accounts.party import get_party_account
 from erpnext.controllers.sales_and_purchase_return import make_return_doc
+from frappe.tests.utils import FrappeTestCase
+from frappe.utils import flt, nowdate
 
 from retail_shop.setup.install import ensure_retail_shop_setup
 from retail_shop.setup.workspace import WORKSPACE_NAME
@@ -27,7 +26,9 @@ class TestRetailShop(FrappeTestCase):
 			"Account",
 			{"company": cls.company, "account_type": "Cost of Goods Sold", "is_group": 0},
 			"name",
-		) or frappe.db.get_value("Account", {"company": cls.company, "root_type": "Expense", "is_group": 0}, "name")
+		) or frappe.db.get_value(
+			"Account", {"company": cls.company, "root_type": "Expense", "is_group": 0}, "name"
+		)
 		cls.customer_group = frappe.db.get_value("Customer Group", {"is_group": 0}, "name")
 		cls.territory = frappe.db.get_value("Territory", {"is_group": 0}, "name")
 		cls.supplier_group = frappe.db.get_value("Supplier Group", {"is_group": 0}, "name")
@@ -46,7 +47,7 @@ class TestRetailShop(FrappeTestCase):
 		self.assertEqual(workspace.public, 1)
 
 	def test_three_shop_roles_exist(self):
-		from retail_shop.setup.defaults import SHOP_ADMIN_ROLE, SALESPERSON_ROLE, TECHNICAL_ADMIN_ROLE
+		from retail_shop.setup.defaults import SALESPERSON_ROLE, SHOP_ADMIN_ROLE, TECHNICAL_ADMIN_ROLE
 
 		for role in (TECHNICAL_ADMIN_ROLE, SHOP_ADMIN_ROLE, SALESPERSON_ROLE):
 			self.assertTrue(frappe.db.exists("Role", role), role)
@@ -82,9 +83,7 @@ class TestRetailShop(FrappeTestCase):
 		labels = {row.label for row in workspace.links}
 		self.assertIn("Users", labels)
 		self.assertNotIn("User", labels)
-		self.assertTrue(
-			any(row.link_to == "shop-users" for row in workspace.links if row.type == "Link")
-		)
+		self.assertTrue(any(row.link_to == "shop-users" for row in workspace.links if row.type == "Link"))
 
 	def test_create_shop_user_with_username_and_role(self):
 		from retail_shop.api.shop_users import create_shop_user, list_shop_users
@@ -176,6 +175,7 @@ class TestRetailShop(FrappeTestCase):
 						"qty": 5,
 						"unit_purchase_price": 95,
 						"selling_unit_price": 120,
+						"minimum_selling_price": 100,
 					}
 				],
 			}
@@ -192,6 +192,7 @@ class TestRetailShop(FrappeTestCase):
 		self.assertAlmostEqual(flt(item.standard_rate), 120.0, places=2)
 		self.assertAlmostEqual(flt(item.last_purchase_rate), 95.0, places=2)
 		self.assertAlmostEqual(flt(item.custom_purchase_unit_price), 95.0, places=2)
+		self.assertAlmostEqual(flt(item.custom_minimum_selling_price), 100.0, places=2)
 
 	def test_stock_in_fills_company_and_warehouse(self):
 		item_code = self._make_item()
@@ -206,6 +207,7 @@ class TestRetailShop(FrappeTestCase):
 						"qty": 3,
 						"unit_purchase_price": 50,
 						"selling_unit_price": 80,
+						"minimum_selling_price": 70,
 					}
 				],
 			}
@@ -296,7 +298,13 @@ class TestRetailShop(FrappeTestCase):
 				"company": self.company,
 				"warehouse": self.warehouse,
 				"items": [
-					{"item_code": item_code, "qty": 10, "unit_purchase_price": 80, "selling_unit_price": 80},
+					{
+						"item_code": item_code,
+						"qty": 10,
+						"unit_purchase_price": 80,
+						"selling_unit_price": 80,
+						"minimum_selling_price": 75,
+					},
 				],
 			}
 		)
@@ -321,8 +329,91 @@ class TestRetailShop(FrappeTestCase):
 		self.assertFalse(frappe.has_permission("Sales Invoice", "amend", user=user.name))
 		self.assertTrue(frappe.has_permission("Sales Invoice", "submit", user=user.name))
 
+	def test_pos_profile_allows_price_change_but_only_transaction_discount(self):
+		from retail_shop.setup.defaults import POS_PROFILE_NAME
+
+		profile = frappe.get_doc("POS Profile", POS_PROFILE_NAME)
+		self.assertEqual(profile.allow_rate_change, 1)
+		self.assertEqual(profile.allow_discount_change, 0)
+		self.assertEqual(profile.apply_discount_on, "Net Total")
+		self.assertEqual(profile.ignore_pricing_rule, 1)
+
+		fields = {row.fieldname: row for row in frappe.get_single("POS Settings").invoice_fields}
+		self.assertIn("discount_amount", fields)
+		self.assertEqual(fields["discount_amount"].label, "Transaction Discount")
+		self.assertEqual(fields["discount_amount"].fieldtype, "Currency")
+
+	def test_salesperson_can_adjust_price_above_minimum(self):
+		item_code = self._make_item()
+		self._make_purchase_entry(item_code, self._make_supplier(), qty=5, rate=120, minimum_price=100)
+		invoice = self._make_sales_invoice(
+			item_code,
+			self._make_customer(),
+			None,
+			qty=1,
+			rate=110,
+			price_list_rate=120,
+			line_discount_percentage=8.333,
+		)
+		self.assertAlmostEqual(invoice.items[0].rate, 110.0, places=2)
+		self.assertAlmostEqual(invoice.items[0].net_rate, 110.0, places=2)
+		self.assertEqual(invoice.items[0].discount_percentage, 0)
+
+	def test_sale_below_minimum_selling_price_is_rejected(self):
+		item_code = self._make_item()
+		self._make_purchase_entry(item_code, self._make_supplier(), qty=5, rate=120, minimum_price=100)
+		with self.assertRaises(frappe.ValidationError):
+			self._make_sales_invoice(item_code, self._make_customer(), None, qty=1, rate=99)
+
+	def test_fixed_transaction_discount_is_applied_to_total(self):
+		item_code = self._make_item()
+		self._make_purchase_entry(item_code, self._make_supplier(), qty=5, rate=120, minimum_price=100)
+		invoice = self._make_sales_invoice(
+			item_code,
+			self._make_customer(),
+			None,
+			qty=2,
+			rate=120,
+			discount_amount=20,
+		)
+		self.assertEqual(invoice.apply_discount_on, "Net Total")
+		self.assertEqual(invoice.additional_discount_percentage, 0)
+		self.assertAlmostEqual(invoice.discount_amount, 20.0, places=2)
+		self.assertAlmostEqual(invoice.net_total, 220.0, places=2)
+		self.assertAlmostEqual(invoice.items[0].net_rate, 110.0, places=2)
+
+	def test_transaction_discount_cannot_push_item_below_minimum(self):
+		item_code = self._make_item()
+		self._make_purchase_entry(item_code, self._make_supplier(), qty=5, rate=120, minimum_price=100)
+		with self.assertRaises(frappe.ValidationError):
+			self._make_sales_invoice(
+				item_code,
+				self._make_customer(),
+				None,
+				qty=2,
+				rate=120,
+				discount_amount=50,
+			)
+
+	def test_percentage_transaction_discount_is_rejected(self):
+		item_code = self._make_item()
+		self._make_purchase_entry(item_code, self._make_supplier(), qty=5, rate=120, minimum_price=100)
+		with self.assertRaises(frappe.ValidationError):
+			self._make_sales_invoice(
+				item_code,
+				self._make_customer(),
+				None,
+				qty=1,
+				rate=120,
+				additional_discount_percentage=5,
+			)
+
 	def test_commission_payment_reduces_outstanding(self):
-		from retail_shop.utils.commission import get_commission_earned, get_commission_outstanding, get_commission_paid
+		from retail_shop.utils.commission import (
+			get_commission_earned,
+			get_commission_outstanding,
+			get_commission_paid,
+		)
 
 		item_code = self._make_item()
 		supplier = self._make_supplier()
@@ -395,7 +486,9 @@ class TestRetailShop(FrappeTestCase):
 				"doctype": "Stock Reconciliation",
 				"purpose": "Stock Reconciliation",
 				"company": self.company,
-				"items": [{"item_code": item_code, "warehouse": self.warehouse, "qty": 8, "valuation_rate": 80}],
+				"items": [
+					{"item_code": item_code, "warehouse": self.warehouse, "qty": 8, "valuation_rate": 80}
+				],
 			}
 		)
 		with self.assertRaises(frappe.ValidationError):
@@ -406,7 +499,9 @@ class TestRetailShop(FrappeTestCase):
 		doc.submit()
 
 		self.assertTrue(
-			frappe.db.exists("Retail Audit Log", {"event_type": "Inventory Adjustment", "reference_name": doc.name})
+			frappe.db.exists(
+				"Retail Audit Log", {"event_type": "Inventory Adjustment", "reference_name": doc.name}
+			)
 		)
 
 	def _reset_require_electrician(self):
@@ -461,6 +556,7 @@ class TestRetailShop(FrappeTestCase):
 				"stock_uom": "Nos",
 				"is_stock_item": 1,
 				"item_group": frappe.db.get_value("Item Group", {"is_group": 0}, "name"),
+				"custom_minimum_selling_price": 1,
 			}
 		)
 		item.insert(ignore_permissions=True)
@@ -503,7 +599,7 @@ class TestRetailShop(FrappeTestCase):
 		doc.insert(ignore_permissions=True)
 		return doc
 
-	def _make_purchase_entry(self, item_code, supplier, qty, rate):
+	def _make_purchase_entry(self, item_code, supplier, qty, rate, minimum_price=None):
 		doc = frappe.get_doc(
 			{
 				"doctype": "Purchase Entry",
@@ -517,6 +613,7 @@ class TestRetailShop(FrappeTestCase):
 						"qty": qty,
 						"unit_purchase_price": rate,
 						"selling_unit_price": rate,
+						"minimum_selling_price": minimum_price if minimum_price is not None else rate,
 					}
 				],
 			}
@@ -525,7 +622,18 @@ class TestRetailShop(FrappeTestCase):
 		doc.submit()
 		return doc
 
-	def _make_sales_invoice(self, item_code, customer, electrician, qty, rate):
+	def _make_sales_invoice(
+		self,
+		item_code,
+		customer,
+		electrician,
+		qty,
+		rate,
+		discount_amount=0,
+		additional_discount_percentage=0,
+		price_list_rate=None,
+		line_discount_percentage=0,
+	):
 		debit_to = get_party_account("Customer", customer, self.company)
 		doc = frappe.get_doc(
 			{
@@ -537,6 +645,9 @@ class TestRetailShop(FrappeTestCase):
 				"debit_to": debit_to,
 				"currency": self.currency,
 				"conversion_rate": 1,
+				"apply_discount_on": "Net Total",
+				"discount_amount": discount_amount,
+				"additional_discount_percentage": additional_discount_percentage,
 				"update_stock": 1,
 				"custom_electrician": electrician,
 				"set_warehouse": self.warehouse,
@@ -546,7 +657,8 @@ class TestRetailShop(FrappeTestCase):
 						"warehouse": self.warehouse,
 						"qty": qty,
 						"rate": rate,
-						"price_list_rate": rate,
+						"price_list_rate": price_list_rate if price_list_rate is not None else rate,
+						"discount_percentage": line_discount_percentage,
 						"income_account": self.income_account,
 						"expense_account": self.expense_account,
 						"cost_center": self.cost_center,
